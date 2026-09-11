@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Producción PTL</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        :root{--bg-body:linear-gradient(135deg, #F5F5F7 0%, #EAEAEF 100%);--bg-card:rgba(255, 255, 255, 0.95);--bg-solid:#FFFFFF;--bg-subtle:#FAFAFA;--text-main:#1D1D1F;--text-muted:#86868B;--border:#E5E5EA;--primary:#28234D;--primary-hover:#1a1636;--danger:#FF3B30;--success:#34C759;--accent:#007AFF;--warning:#FFCC00;--shadow-sm:rgba(0,0,0,0.03);--shadow-md:rgba(0,0,0,0.08);--w-cyan-bg:#F0F9FF;--w-cyan-border:#BAE6FD;--w-cyan-text:#0369A1;}
+        body.dark-mode{--bg-body:linear-gradient(135deg, #121212 0%, #1A1A1E 100%);--bg-card:rgba(30, 30, 34, 0.95);--bg-solid:#1E1E22;--bg-subtle:#252529;--text-main:#F5F5F7;--text-muted:#A1A1A6;--border:#333338;--primary:#8278C9;--primary-hover:#9B92DA;--danger:#FF453A;--success:#32D74B;--accent:#0A84FF;--warning:#FFD60A;--shadow-sm:rgba(0,0,0,0.2);--shadow-md:rgba(0,0,0,0.4);--w-cyan-bg:#082F49;--w-cyan-border:#0C4A6E;--w-cyan-text:#7DD3FC;}
+        body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;margin:0;padding:15px;background:var(--bg-body);color:var(--text-main);-webkit-font-smoothing:antialiased;min-height:100vh;font-size:13px;}
+        .container{background-color:var(--bg-card);backdrop-filter:blur(15px);padding:20px;border-radius:20px;box-shadow:0 15px 35px var(--shadow-md),0 1px 3px var(--shadow-sm);max-width:1500px;margin:auto;}
+        
+        .main-banner{background:var(--primary);color:white;padding:20px;border-radius:16px;margin-bottom:20px;box-shadow:0 8px 20px var(--shadow-md);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+        .main-banner h2{margin:0;font-weight:900;font-size:26px; letter-spacing: 0.5px;}
+        .theme-btn{border-radius:20px;padding:6px 14px;cursor:pointer;color:white;display:flex;align-items:center;gap:8px;font-weight:600;font-size:12px;border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); transition:all 0.2s}
+        .theme-btn:hover{background:rgba(255,255,255,0.2);border-color:white}
+        .banner-top-right{position:absolute;right:20px;top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+        #cloud-status{background:rgba(0,0,0,0.3);padding:6px 12px;border-radius:12px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px; color:white; border:1px solid rgba(255,255,255,0.2)}
+        
+        .tabs-container { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; overflow-x:auto; white-space:nowrap;}
+        .tab-btn { background: transparent; border: none; font-size: 15px; font-weight: 800; color: var(--text-muted); cursor: pointer; padding: 10px 15px; border-radius: 12px; transition: all 0.2s; white-space:nowrap;}
+        .tab-btn:hover { background: var(--bg-subtle); color: var(--primary); }
+        .tab-btn.active { background: var(--w-cyan-bg); color: var(--w-cyan-text); box-shadow: 0 4px 10px var(--shadow-sm); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .section-box{border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:15px;background-color:var(--bg-solid);box-shadow:0 4px 12px var(--shadow-sm)}
+        .file-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;margin-bottom:15px}
+        .drop-zone{border:1px dashed var(--text-muted);border-radius:12px;padding:15px 10px;text-align:center;cursor:pointer;background:var(--bg-subtle);position:relative;min-height:80px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+        .drop-zone.loaded{border-color:var(--success);border-style:solid;background:rgba(52,199,89,0.05)}
+        .drop-zone label{font-weight:700;margin-bottom:5px;color:var(--text-main);pointer-events:none;font-size:11px}
+        .drop-zone .file-name{font-size:10px;color:var(--text-muted);pointer-events:none; font-weight:bold;}
+        
+        button.btn-primary{background-color:var(--primary);color:white;padding:10px 16px;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:all 0.2s}
+        button.btn-primary:hover{background-color:var(--primary-hover);transform:translateY(-2px);box-shadow:0 6px 15px var(--shadow-md)}
+        button.btn-outline{background-color:transparent;border:1px solid var(--border);color:var(--text-main);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600; transition:all 0.2s;}
+        button.btn-outline:hover{background:var(--bg-subtle);}
+        
+        .form-control{width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-solid);color:var(--text-main);font-size:13px;font-weight:600;outline:none; box-sizing:border-box;}
+        .toast{position:fixed;top:20px;right:20px;padding:15px 25px;border-radius:12px;background:var(--bg-card);backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,0.15);font-weight:600;z-index:9999;border-left:5px solid var(--primary);display:flex; flex-direction:column; gap:8px}
+        
+        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin-top:10px}
+        .cal-header{font-weight:bold;color:var(--text-muted);font-size:11px}
+        .cal-day{border:1px solid var(--border);border-radius:6px;padding:8px;cursor:pointer;font-weight:700;background:var(--bg-solid);transition:transform 0.2s}
+        .cal-day:hover{transform:scale(1.05)}
+        .cal-red{border-color:var(--danger);background:rgba(255,59,48,0.05);color:var(--danger)}
+        .cal-green{border-color:var(--success);background:rgba(52,199,89,0.1);color:var(--success)}
+        
+        .table-container{overflow-x:auto; -webkit-overflow-scrolling: touch; user-select:text;}
+        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px; white-space:nowrap; user-select:text;}
+        th, td{padding:10px; text-align:center; border:1px solid var(--border);}
+        th{background:var(--bg-subtle);font-weight:900;color:var(--text-muted);text-transform:uppercase;font-size:11px;}
+        td {font-weight: 600;}
+        #loader { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:99999; display:none; justify-content:center; align-items:center; flex-direction:column; font-weight:bold; color:var(--primary); font-size:18px;}
+        
+        /* BLOQUES GIGANTES DE NETEO */
+        .net-cards-wrapper { display:flex; justify-content:space-between; gap:20px; text-align:center; margin-bottom:20px; flex-wrap:wrap;}
+        .net-card { flex:1; min-width:300px; padding:25px 20px; border-radius:16px; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; box-shadow:0 10px 25px rgba(0,0,0,0.15); transition:transform 0.2s; position: relative;}
+        .net-card:hover { transform:translateY(-5px); }
+        .net-title { font-size:15px; font-weight:900; opacity:0.9; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;}
+        .net-value { font-size:42px; font-weight:900; letter-spacing:-1px;}
+        
+        .bg-captadas { background: linear-gradient(135deg, var(--accent) 0%, #005bb5 100%); padding-bottom: 20px;}
+        .bg-finalizadas { background: linear-gradient(135deg, var(--success) 0%, #248a3d 100%); padding-bottom: 20px;}
+        .bg-pendientes { background: linear-gradient(135deg, var(--danger) 0%, #b3241d 100%); padding-bottom: 20px;}
+        
+        /* SUB-MÉTRICAS INTEGRADAS */
+        .stats-sub-row { display:flex; justify-content:space-between; width:100%; margin-top:15px; font-size:11px; opacity:0.95; border-top:1px solid rgba(255,255,255,0.3); padding-top:12px; gap:8px;}
+        .stats-sub-item { display:flex; flex-direction:column; align-items:center; flex:1;}
+        .stats-sub-val { font-size:14px; font-weight:900;}
+        .stats-sub-lbl { font-size:9px; font-weight:700; text-transform:uppercase;}
+
+        .td-estatus-fin { color: var(--success); font-weight:900; }
+        .td-estatus-pen { color: var(--danger); font-weight:900; }
+        .td-estatus-warning { color: var(--warning); font-weight:900; }
+        .hover-row:hover { background: var(--bg-subtle); }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .banner-top-right { position: relative; top: 0; right: 0; justify-content: center; margin-top: 10px; width: 100%; }
+            .file-grid { grid-template-columns: 1fr; }
+            .section-box { padding: 15px; }
+            .controls-mobile { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+            .controls-mobile > button, .controls-mobile > div { width: 100%; justify-content: center; }
+            .net-card { min-width: 100%; padding:20px; }
+            .stats-sub-row { flex-wrap:wrap; gap:5px; }
+            .stats-sub-item { min-width:45%; margin-bottom:5px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loader">
+    <div style="font-size:40px; margin-bottom:10px; animation: pulse 1s infinite;">☁️</div>
+    <span id="loader-text" style="text-align:center; padding:0 20px;">Sincronizando Sistema...</span>
+</div>
+
+<!-- Modal Carga EWM (AHORA LLAMADO DESDE PESTAÑA 2) -->
+<div id="uploadModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
+    <div style="background:var(--bg-card); padding:20px; border-radius:16px; width:100%; max-width:700px; max-height:90vh; overflow-y:auto; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <h3 style="margin-top:0; color:var(--primary);">Carga EWM: <span id="modalDate" style="color:var(--accent);"></span></h3>
+        <div class="file-grid">
+            <div class="drop-zone" id="dz-modalTotes" onclick="document.getElementById('modalTotes').click()"><label>Listado de Totes (Inc. Knapp)</label><span class="file-name" id="fn-totes">Clic aquí</span><div class="time-cut" id="time-totes"></div><input type="file" id="modalTotes" accept=".csv, .xlsx" style="display:none;"></div>
+            <div class="drop-zone" id="dz-modalPuntos" onclick="document.getElementById('modalPuntos').click()"><label>Puntos Escáner/Cerradora</label><span class="file-name" id="fn-puntos">Clic aquí</span><div class="time-cut" id="time-puntos"></div><input type="file" id="modalPuntos" accept=".csv, .xlsx" style="display:none;"></div>
+            <div class="drop-zone" id="dz-modalEwm" onclick="document.getElementById('modalEwm').click()"><label>EWM Pedidos</label><span class="file-name" id="fn-ewm">Clic aquí</span><div class="time-cut" id="time-ewm"></div><input type="file" id="modalEwm" accept=".csv, .xlsx" multiple style="display:none;"></div>
+            <div class="drop-zone" id="dz-modalEmpeno" onclick="document.getElementById('modalEmpeno').click()"><label>Empeño Retail</label><span class="file-name" id="fn-empeno">Clic aquí</span><div class="time-cut" id="time-empeno"></div><input type="file" id="modalEmpeno" accept=".csv, .xlsx" style="display:none;"></div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-outline" style="flex:1; min-width:120px;" onclick="document.getElementById('uploadModal').style.display='none'">Cerrar</button>
+            <button class="btn-primary" style="flex:1; min-width:120px;" onclick="procesarCargaDia()">Subir Nube</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Atrasados -->
+<div id="modalAtrasados" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
+    <div style="background:var(--bg-card); padding:20px; border-radius:16px; width:100%; max-width:1000px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; flex-wrap:wrap; gap:10px;">
+            <h3 style="margin:0; color:var(--primary); font-size:18px;">⏳ Gestor Masivo de Atrasados (> 2 Días)</h3>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-primary" style="background:var(--success);" onclick="descargarAtrasados()">📥 Bajar Excel</button>
+                <button class="btn-outline" onclick="document.getElementById('modalAtrasados').style.display='none'">X Cerrar</button>
+            </div>
+        </div>
+        <div style="margin-bottom:15px; text-align:right;">
+            <button class="btn-primary" onclick="guardarAtrasadosMasivo()">💾 GUARDAR TODOS LOS CIERRES</button>
+        </div>
+        <div class="table-container" style="overflow-y:auto; flex:1;">
+            <table style="width:100%;">
+                <thead><tr><th>Pedido</th><th>Día EWM</th><th>Línea</th><th>Fase</th><th>Último Escáner</th><th>Estatus Knapp</th><th>Retraso</th><th style="background:var(--w-cyan-bg);">Fecha Cierre Manual</th></tr></thead>
+                <tbody id="atrasados-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Fraudes -->
+<div id="modalFraudes" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
+    <div style="background:var(--bg-card); padding:20px; border-radius:16px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px;">
+            <h3 style="margin:0; color:var(--danger); font-size:16px;">🛑 Lista Negra (Fraudes)</h3>
+            <button class="btn-outline" onclick="document.getElementById('modalFraudes').style.display='none'">X</button>
+        </div>
+        <textarea id="inputFraudes" class="form-control" rows="2" placeholder="Pega pedidos cancelados aquí..."></textarea>
+        <button class="btn-primary" style="background:var(--danger); margin-top:10px;" onclick="guardarFraudes()">🚫 Bloquear Pedidos</button>
+        <div class="table-container" style="overflow-y:auto; flex:1; margin-top:15px;">
+            <table style="width:100%;">
+                <thead><tr><th>Pedido</th><th>Registro</th><th>Acción</th></tr></thead>
+                <tbody id="fraudes-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="main-banner">
+        <h2>Auditoría PTL & Producción</h2>
+        <div class="banner-top-right">
+            <div id="cloud-status">☁️ Local</div>
+            <button class="theme-btn" style="background:var(--danger); border:none;" onclick="resetApp()">🗑️ Reset</button>
+            <button class="theme-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+        </div>
+    </div>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" id="btn-tab-1" onclick="switchTab('1')">📊 Resumen Operativo</button>
+        <button class="tab-btn" id="btn-tab-2" onclick="switchTab('2')">📋 Base Detalle</button>
+    </div>
+
+    <!-- ================= PESTAÑA 1 (DASHBOARD PURO) ================= -->
+    <div id="tab-1" class="tab-content active">
+        
+        <div class="controls-mobile" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 15px;">
+            <div style="display:flex; gap: 10px;">
+                <button class="btn-outline" style="border-color:var(--danger); color:var(--danger); font-size:13px; font-weight:800;" onclick="abrirGestorFraudes()">🛑 Fraudes</button>
+                <button class="btn-outline" style="border-color:var(--warning); color:var(--warning-dark); font-size:13px; font-weight:800;" onclick="abrirGestorAtrasados()">⏳ Atrasados Masivos</button>
+            </div>
+            <div style="display:flex; gap: 5px; align-items:center; font-size:13px;">
+                <input type="date" id="hist-date-start" class="form-control" style="padding:6px; font-size:12px;"> 
+                <span style="font-weight:bold;">a</span>
+                <input type="date" id="hist-date-end" class="form-control" style="padding:6px; font-size:12px;"> 
+                <button class="btn-primary" style="padding:8px 15px;" onclick="renderHistoricalDashboards()">🔄 Filtrar</button>
+            </div>
+        </div>
+
+        <!-- NETEO MATEMÁTICO GIGANTE (ACTUALIZADO V32) -->
+        <div class="net-cards-wrapper">
+            <!-- CAPTADAS -->
+            <div class="net-card bg-captadas">
+                <div class="net-title">Unidades Captadas</div>
+                <div class="net-value" id="net-ingresos">0</div>
+                <div class="stats-sub-row">
+                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-lbl">L1:</span><span class="stats-sub-val" id="pct-l1">0%</span></div>
+                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-lbl">L2:</span><span class="stats-sub-val" id="pct-l2">0%</span></div>
+                </div>
+            </div>
+            
+            <!-- FINALIZADAS -->
+            <div class="net-card bg-finalizadas">
+                <div class="net-title">Unidades Finalizadas</div>
+                <div class="net-value" id="net-cierres">0</div>
+                <div class="stats-sub-row">
+                    <div class="stats-sub-item"><span class="stats-sub-val" id="un-l1">0</span><span class="stats-sub-lbl">Cierres L1</span></div>
+                    <div class="stats-sub-item"><span class="stats-sub-val" id="un-l2">0</span><span class="stats-sub-lbl">Cierres L2</span></div>
+                    <div class="stats-sub-item"><span class="stats-sub-val" id="un-ret">0</span><span class="stats-sub-lbl">Cierres Retail</span></div>
+                    <div class="stats-sub-item"><span class="stats-sub-val" id="mega-factor">0.00</span><span class="stats-sub-lbl">Factor Cajas</span></div>
+                </div>
+            </div>
+            
+            <!-- PENDIENTES -->
+            <div class="net-card bg-pendientes">
+                <div class="net-title">Unidades Pendientes</div>
+                <div class="net-value" id="net-pendientes">0</div>
+                <div class="stats-sub-row">
+                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-val" id="pend-l1">0</span><span class="stats-sub-lbl">Peds L1</span></div>
+                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-val" id="pend-l2">0</span><span class="stats-sub-lbl">Peds L2</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="margin:0; color:var(--primary);">📥 Registro de Ingresos EWM</h4>
+                <button class="btn-primary" style="background:var(--text-muted); padding:6px 12px;" onclick="descargarIngresos()">📥 Excel</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Día Carga</th><th>Peds Total</th><th>Unds Total</th><th>L1 Peds</th><th>L1 Unds</th><th>L2 Peds</th><th>L2 Unds</th><th>Ret Peds</th><th>Ret Unds</th></tr></thead>
+                    <tbody id="ingresos-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="margin:0; color:var(--primary);">🚀 Producción Física (Cierres)</h4>
+                <button class="btn-primary" style="background:var(--danger); padding:6px 12px;" onclick="descargarPendientes()">📥 Bajar Pendientes</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Fecha Cierre</th><th>Peds Fin.</th><th>F.Cajas</th><th>Total Unds</th><th>L1 Unds</th><th>L2 Unds</th><th>Ret Unds</th></tr></thead>
+                    <tbody id="resumen-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PESTAÑA 2 (SALA DE MÁQUINAS) ================= -->
+    <div id="tab-2" class="tab-content">
+        
+        <div class="section-box" style="display:flex; gap: 20px; align-items:flex-start; flex-wrap: wrap;">
+            <!-- CALENDARIO AHORA ESTÁ AQUÍ -->
+            <div style="flex: 1; min-width: 300px;">
+                <h3 style="margin:0 0 10px 0; color:var(--primary);">Carga Diaria (EWM / Totes)</h3>
+                <p style="font-size:11px; color:var(--text-muted);">Clic en un día para cargar archivos Base. El mes se bloquea el día 5 del mes siguiente.</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <button class="btn-outline" style="padding:2px 8px;" onclick="changeCalMonth(-1)">◀</button>
+                    <h4 style="margin:0; color:var(--primary); font-size:14px;" id="cal-month-name">Mes</h4>
+                    <button class="btn-outline" style="padding:2px 8px;" onclick="changeCalMonth(1)">▶</button>
+                </div>
+                <div class="cal-grid"><div class="cal-header">L</div><div class="cal-header">M</div><div class="cal-header">X</div><div class="cal-header">J</div><div class="cal-header">V</div><div class="cal-header">S</div><div class="cal-header">D</div></div>
+                <div id="calendar-container" class="cal-grid"></div>
+            </div>
+
+            <div style="flex: 1; min-width: 300px; display:flex; flex-direction:column; gap:15px;">
+                <!-- MAJESTIC -->
+                <div style="padding:15px; border:1px solid var(--border); border-radius:12px; background:var(--bg-subtle);">
+                    <h4 style="margin:0 0 10px 0; color:var(--primary);">Carga Majestic</h4>
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:0;">Sube el consolidado del mes visible en el calendario para cerrar pallets.</p>
+                    <button id="btn-majestic" class="btn-outline" style="width:100%; font-size:12px; border-style:dashed; border-color:var(--accent); color:var(--accent);" onclick="document.getElementById('modalMajestic').click()">📥 Subir Majestic</button>
+                    <input type="file" id="modalMajestic" accept=".csv, .xlsx" style="display:none;" onchange="handleMajesticUpload(this)">
+                </div>
+
+                <!-- DESCARGA MENSUAL -->
+                <div style="padding:15px; border:1px solid var(--border); border-radius:12px; background:var(--bg-subtle);">
+                    <h4 style="margin:0 0 10px 0; color:var(--primary);">Extracción Base Histórica</h4>
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:0;">Descarga el consolidado trazable de un mes específico (Del 26 al 25).</p>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="month" id="detalle-month-picker" class="form-control" style="width:100%;">
+                        <button class="btn-primary" onclick="renderTabDetalleMensual()">🔄 Preparar</button>
+                        <button class="btn-primary" style="background:var(--success);" onclick="descargarTablaDetalle()">📥 Excel</button>
+                    </div>
+                    <div id="detalle-mes-tbody" style="text-align:center; padding:15px; margin-top:10px; color:var(--text-muted); font-size:12px; border: 1px dashed var(--border); border-radius: 8px;">
+                        Selecciona un mes y prepara la base
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // =======================================================
+    // 🚨 CONFIGURACIÓN API REST (CLOUDFLARE PAGES)
+    // =======================================================
+    // Como lo vas a hostear en Cloudflare Pages, la ruta es relativa:
+    const API_URL = "/api/sync"; 
+    
+    // Variable global para saber si el historial completo ya bajó
+    let IS_FULL_HISTORY_DOWNLOADED = false;
+
+    const COLS = { 
+        PEDIDO: ['Pedido', 'Nº Pedido', 'Ident.ext.entrega'],
+        TOTE: ['Cód. Barras', 'Lectura', 'Tote', 'Código de Tote'],
+        PUNTO: ['Punto de decisión', 'Punto de decision', 'Punto', 'Estación'],
+        CANTIDAD: ['Cantidad total de artículos de pedido', 'Cantidad', 'Unidades', 'Ctd', 'Ctd.'],
+        FASE_EWM: ['Fase', 'Picking', 'Fase ewm'], 
+        ESTATUS: ['Estatus', 'Estado'],
+        DOCUMENTO: ['Documento', 'Doc', 'Doc.', 'Nº documento', 'Num Doc', 'Doc. Ventas', 'Entrega', 'Nº de documento', 'Documento de venta', 'Doc.Ref.'],
+        CTD_EMPENO: ['Ctd.', 'Ctd', 'Cantidad', 'Cantidad total', 'Ctd.entrega', 'Ctd total', 'Cant.', 'Unidades', 'Cantidad entregada'],
+        FECHA: ['Fecha de Creación', 'Fecha creacion', 'Fecha de creación', 'Fecha', 'Creados el'],
+        M_PEDIDO: ['Pedido', 'Nº Pedido', 'Ident.ext.entrega'], 
+        M_PALLET: ['Pallet', 'H', 'H.U.'],
+        M_FECHA: ['Fecha pallet', 'Fecha cierre', 'Fecha pesaje'],
+        M_EMBALAJE: ['Embalaje', 'Tote']
+    };
+
+    let DIAS_DISPONIBLES = new Set();
+    let TABLA_DETALLE_GLOBAL = []; 
+    let TABLA_DETALLE_MES = []; 
+    let viewMonthOffset = 0; 
+    let retroDateTarget = null; 
+
+    // --- DB LOCAL V32 (NUEVA ARQUITECTURA CF) ---
+    const DB_NAME = 'PTL_Database_Local_V32'; 
+    function initDB() { 
+        return new Promise((resolve, reject) => { 
+            let req = indexedDB.open(DB_NAME, 1); 
+            req.onupgradeneeded = e => { 
+                let db = e.target.result; 
+                if(!db.objectStoreNames.contains('totes')) db.createObjectStore('totes'); 
+                if(!db.objectStoreNames.contains('puntos')) db.createObjectStore('puntos'); 
+                if(!db.objectStoreNames.contains('ewm')) db.createObjectStore('ewm'); 
+                if(!db.objectStoreNames.contains('empeno')) db.createObjectStore('empeno'); 
+                if(!db.objectStoreNames.contains('magestic')) db.createObjectStore('magestic'); 
+                if(!db.objectStoreNames.contains('fechas')) db.createObjectStore('fechas'); 
+                if(!db.objectStoreNames.contains('detalle_mes')) db.createObjectStore('detalle_mes'); 
+                if(!db.objectStoreNames.contains('manuales')) db.createObjectStore('manuales'); 
+                if(!db.objectStoreNames.contains('fraudes')) db.createObjectStore('fraudes'); 
+            }; 
+            req.onsuccess = e => resolve(e.target.result); 
+            req.onerror = e => reject(e); 
+        }); 
+    }
+    async function saveStore(storeName, key, data) { let db = await initDB(); return new Promise((resolve, reject) => { let tx = db.transaction(storeName, 'readwrite'); tx.objectStore(storeName).put(data, key); tx.oncomplete = () => resolve(); tx.onerror = e => reject(e); }); }
+    async function getStore(storeName, key) { let db = await initDB(); return new Promise(resolve => { let req = db.transaction(storeName).objectStore(storeName).get(key); req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null); }); }
+    async function getAllKeys(storeName) { let db = await initDB(); return new Promise(resolve => { let req = db.transaction(storeName).objectStore(storeName).getAllKeys(); req.onsuccess = () => resolve(req.result); req.onerror = () => resolve([]); }); }
+
+    function switchTab(tabId) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active')); document.getElementById('tab-' + tabId).classList.add('active'); document.getElementById('btn-tab-' + tabId).classList.add('active'); if(tabId === '2') { let t = new Date(); document.getElementById('detalle-month-picker').value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`; } }
+    function resetApp() { if(confirm("⚠️ ¿Resetear BD Local? Esto recargará los datos desde la Nube.")) { indexedDB.deleteDatabase(DB_NAME); location.reload(); } }
+    function loader(show, txt='Procesando...') { document.getElementById('loader').style.display = show ? 'flex' : 'none'; document.getElementById('loader-text').innerText = txt; }
+    function toast(msg) { const t=document.createElement('div'); t.className='toast'; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 5000); }
+    function getToday() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    function setCloudStatus(msg, isError=false) { let el = document.getElementById('cloud-status'); el.innerHTML = msg; el.style.color = isError ? "var(--danger)" : "var(--success)"; el.style.borderColor = isError ? "var(--danger)" : "var(--success)"; }
+    const setTxt = (id, txt) => { let e = document.getElementById(id); if(e) e.innerText = txt; };
+    function formatNumber(num) { return Number(num).toLocaleString('es-CL'); }
+
+    function cleanPedido(val) { if (val === undefined || val === null) return ""; let s = String(val).replace(/^[="]+|["]+$/g, '').trim(); if (s.endsWith('.0')) s = s.slice(0, -2); return s.replace(/^0+(?!$)/, ''); }
+    function cleanDocumento(val) { if (val === undefined || val === null) return ""; let s = String(val).replace(/^[="]+|["]+$/g, '').trim(); if (s.endsWith('.0')) s = s.slice(0, -2); return s.replace(/^0+(?!$)/, ''); }
+    function cleanTote(val) { if (val === undefined || val === null) return ""; let s = String(val).replace(/^[="]+|["]+$/g, '').trim().toUpperCase(); if (s.endsWith('.0')) s = s.slice(0, -2); return s.replace(/^0+(?!$)/, ''); }
+
+    function parseDateToYYYYMMDD(val, fallback) {
+        if (val === undefined || val === null || val === '') return fallback;
+        if (val instanceof Date) { if (isNaN(val.getTime())) return fallback; return `${val.getUTCFullYear()}-${String(val.getUTCMonth()+1).padStart(2,'0')}-${String(val.getUTCDate()).padStart(2,'0')}`; }
+        if (typeof val === 'number') { let d = new Date(Math.round((val - 25569) * 86400 * 1000)); d = new Date(d.getTime() + d.getTimezoneOffset() * 60000); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+        let s = String(val).trim().replace(/^[="]+|["]+$/g, ''); if (s === '') return fallback; s = s.split(' ')[0]; 
+        let parts = s.split(/[\/\-]/);
+        if (parts.length === 3) {
+            let p1 = parseInt(parts[0], 10); let p2 = parseInt(parts[1], 10); let p3 = parts[2];
+            if (p3.length === 4) { let year = p3; if (p1 > 12) { return `${year}-${String(p2).padStart(2,'0')}-${String(p1).padStart(2,'0')}`; } else if (p2 > 12) { return `${year}-${String(p1).padStart(2,'0')}-${String(p2).padStart(2,'0')}`; } else { return `${year}-${String(p1).padStart(2,'0')}-${String(p2).padStart(2,'0')}`; } } else if (String(parts[0]).length === 4) { return `${parts[0]}-${String(p2).padStart(2,'0')}-${String(parseInt(parts[2], 10)).padStart(2,'0')}`; } else if (p3.length === 2) { let yy = parseInt(p3, 10); let year = yy < 50 ? 2000 + yy : 1900 + yy; if (p1 > 12) { return `${year}-${String(p2).padStart(2,'0')}-${String(p1).padStart(2,'0')}`; } else if (p2 > 12) { return `${year}-${String(p1).padStart(2,'0')}-${String(p2).padStart(2,'0')}`; } else { return `${year}-${String(p1).padStart(2,'0')}-${String(p2).padStart(2,'0')}`; } }
+        }
+        return fallback;
+    }
+
+    function parseDateToTime(val) {
+        if (!val) return ""; if (typeof val === 'number') { let fraction = val - Math.floor(val); let totalSeconds = Math.round(fraction * 86400); let hours = Math.floor(totalSeconds / 3600); let minutes = Math.floor((totalSeconds % 3600) / 60); return String(hours).padStart(2, '0') + ":" + String(minutes).padStart(2, '0'); }
+        let s = String(val).trim(); let m = s.match(/(\d{2}):(\d{2})/); if (m) return m[1] + ":" + m[2]; return s;
+    }
+    function getMaxTime(arr, dateKey) { if(!arr || arr.length === 0) return "--:--"; let maxMins = -1; let maxStr = "--:--"; arr.forEach(x => { let timeStr = parseDateToTime(x[dateKey]); let parts = timeStr.split(':'); if(parts.length === 2) { let mins = parseInt(parts[0])*60 + parseInt(parts[1]); if(mins > maxMins) { maxMins = mins; maxStr = timeStr; } } }); return maxStr; }
+    function buscarColumna(fila, posibles) { if (!fila || !posibles || !Array.isArray(posibles)) return undefined; for (let p of posibles) { let cleanP = String(p).trim().toLowerCase(); for (let key in fila) { if (String(key).trim().toLowerCase() === cleanP) { let val = fila[key]; if (val !== undefined && val !== null && String(val).trim() !== "") return val; } } } return undefined; }
+    function parseQty(val) { if (typeof val === 'number') return val; if (!val) return 0; let s = String(val).trim().replace(/^[="]+|["]+$/g, ''); if (!s) return 0; if (/^\d{1,3}(\.\d{3})+$/.test(s)) { s = s.replace(/\./g, ''); } else if (/^\d{1,3}(,\d{3})+$/.test(s)) { s = s.replace(/,/g, ''); } else if (s.includes(',') && !s.includes('.')) { s = s.replace(',', '.'); } return Number(s) || 0; }
+    function daysBetween(dateEWM) { let t = new Date(getToday()); let e = new Date(dateEWM); return Math.floor((t - e) / (1000 * 60 * 60 * 24)); }
+
+    // --- REGLA DEL MES ACTIVO (26 al 25 con 5 días gracia) ---
+    function getActiveCycle() {
+        let d = new Date(getToday()); let year = d.getFullYear(); let month = d.getMonth() + 1; let day = d.getDate();
+        let startD, endD, prevStartD, prevEndD;
+        if (day <= 25) {
+            let prevM = month === 1 ? 12 : month - 1; let prevY = month === 1 ? year - 1 : year;
+            startD = `${prevY}-${String(prevM).padStart(2,'0')}-26`; endD = `${year}-${String(month).padStart(2,'0')}-25`;
+            let ppM = prevM === 1 ? 12 : prevM - 1; let ppY = prevM === 1 ? prevY - 1 : prevY;
+            prevStartD = `${ppY}-${String(ppM).padStart(2,'0')}-26`; prevEndD = `${prevY}-${String(prevM).padStart(2,'0')}-25`;
+        } else {
+            let nextM = month === 12 ? 1 : month + 1; let nextY = month === 12 ? year + 1 : year;
+            startD = `${year}-${String(month).padStart(2,'0')}-26`; endD = `${nextY}-${String(nextM).padStart(2,'0')}-25`;
+            prevStartD = `${month === 1 ? year - 1 : year}-${String(month === 1 ? 12 : month - 1).padStart(2,'0')}-26`; prevEndD = `${year}-${String(month).padStart(2,'0')}-25`;
+        }
+        return { currentStart: startD, currentEnd: endD, prevStart: prevStartD, prevEnd: prevEndD, day: day };
+    }
+
+    function isPriorityDay(dStr) { 
+        let cycle = getActiveCycle();
+        // Es prioridad si pertenece al mes activo actual
+        if (dStr >= cycle.currentStart && dStr <= cycle.currentEnd) return true;
+        // O si pertenece al mes anterior Y estamos en el periodo de gracia (día 1 al 5)
+        if (dStr >= cycle.prevStart && dStr <= cycle.prevEnd && cycle.day <= 5) return true;
+        return false;
+    }
+
+    function isLockedByCycle(dStr) {
+        let cycle = getActiveCycle();
+        // Si el día es anterior al inicio del mes activo Y ya pasó el periodo de gracia (día > 5)
+        if (dStr < cycle.currentStart && cycle.day > 5) return true;
+        // Si el día es más antiguo que el mes anterior (ya no es gracia)
+        if (dStr < cycle.prevStart) return true;
+        return false;
+    }
+
+    // --- COMUNICACIÓN CON API CLOUDFLARE (FETCH) ---
+    async function syncCloudData(filename, data) {
+        setCloudStatus("☁️ Guardando Nube...");
+        try {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ filename: filename, data: data }), headers: { 'Content-Type': 'application/json' } });
+            setCloudStatus("☁️ Sincronizado Nube");
+        } catch(e) { console.error(e); setCloudStatus("❌ Error Nube", true); }
+    }
+
+    async function fetchCloud(filename) { 
+        try { let res = await fetch(API_URL + "?action=getFile&filename=" + filename); let txt = await res.text(); return txt === "" || txt.includes("404") ? null : txt; } catch(e) { return null; }
+    }
+
+    async function syncDayFromCloud(d, cloudData, localFechasSet) {
+        let log = await getStore('fechas', d) || { totes: false, puntos: false, ewm: false, empeno: false };
+        let updated = false; let fetchTasks = [];
+
+        if(!log.ewm && cloudData.ewm.includes(d)) fetchTasks.push(async () => { let s = await fetchCloud("EWM_"+d+".json"); if(s){ await saveStore('ewm', d, JSON.parse(s)); log.ewm = true; updated=true;} });
+        if(!log.totes && cloudData.totes.includes(d)) fetchTasks.push(async () => { let s = await fetchCloud("Totes_"+d+".json"); if(s){ await saveStore('totes', d, JSON.parse(s)); log.totes = true; updated=true;} });
+        if(!log.empeno && cloudData.empeno.includes(d)) fetchTasks.push(async () => { let s = await fetchCloud("Empeno_"+d+".json"); if(s){ await saveStore('empeno', d, JSON.parse(s)); log.empeno = true; updated=true;} });
+        if(!log.puntos && (cloudData.k22.includes(d) || cloudData.k24.includes(d) || cloudData.v01.includes(d) || cloudData.k23.includes(d) || cloudData.cerradoras.includes(d))) {
+            fetchTasks.push(async () => {
+                let pArr = []; let ptsT = [];
+                if(cloudData.k22.includes(d)) ptsT.push(fetchCloud("K22_"+d+".json"));
+                if(cloudData.k24.includes(d)) ptsT.push(fetchCloud("K24_"+d+".json"));
+                if(cloudData.v01.includes(d)) ptsT.push(fetchCloud("V01_"+d+".json"));
+                if(cloudData.k23.includes(d)) ptsT.push(fetchCloud("K23_"+d+".json"));
+                if(cloudData.cerradoras.includes(d)) ptsT.push(fetchCloud("Cerradoras_"+d+".json"));
+                let res = await Promise.all(ptsT);
+                res.forEach(str => { if(str) pArr = pArr.concat(JSON.parse(str)); });
+                await saveStore('puntos', d, pArr); log.puntos = true; updated = true;
+            });
+        }
+        await Promise.all(fetchTasks.map(t => t()));
+        if(updated) { await saveStore('fechas', d, log); DIAS_DISPONIBLES.add(d); }
+    }
+
+    async function startBackgroundSync(cloudData, localMag, localMeses, backgroundDays, localFechasSet) {
+        try {
+            for(let m of cloudData.magestic) {
+                if(!localMag.has(m)) { let dataStr = await fetchCloud("Magestic_"+m+".json"); if(dataStr) await saveStore('magestic', m, JSON.parse(dataStr)); }
+            }
+            let detailTasks = []; let downloadedMeses = {};
+            for(let s of cloudData.detalles) {
+                let mk = s.replace("Detalle_","").split("_")[0]; let exist = await getStore('detalle_mes', mk);
+                if(!exist) { detailTasks.push(async () => { let dataStr = await fetchCloud(s); if(dataStr) { if(!downloadedMeses[mk]) downloadedMeses[mk] = {}; Object.assign(downloadedMeses[mk], JSON.parse(dataStr)); } }); }
+            }
+            for(let i=0; i<detailTasks.length; i+=5) { await Promise.all(detailTasks.slice(i, i+5).map(t => t())); }
+            for(let mk in downloadedMeses) await saveStore('detalle_mes', mk, downloadedMeses[mk]);
+
+            for(let i=0; i<backgroundDays.length; i+=5) { let chunk = backgroundDays.slice(i, i+5); await Promise.all(chunk.map(d => syncDayFromCloud(d, cloudData, localFechasSet))); }
+            
+            IS_FULL_HISTORY_DOWNLOADED = true;
+            setCloudStatus("☁️ Sincronizado Nube"); await renderCalendar(); await refreshGlobalMemory(); await renderHistoricalDashboards();
+        } catch (e) { console.error("Background sync error:", e); setCloudStatus("⚠️ Historial parcial", true); }
+    }
+
+    window.onload = async () => {
+        let t = getToday(); document.getElementById('hist-date-start').value = t; document.getElementById('hist-date-end').value = t;
+        let localFechas = await getAllKeys('fechas'); localFechas.forEach(d => DIAS_DISPONIBLES.add(d));
+
+        setCloudStatus("☁️ Conectando API..."); loader(true, "Cargando mes activo...");
+        try {
+            let initRes = await fetch(API_URL + "?action=syncInit");
+            if (!initRes.ok) throw new Error("API No Configurada");
+            let resStr = await initRes.text();
+            let cloudData = JSON.parse(resStr);
+            
+            if(cloudData.manuales) { let s = await fetchCloud("Cierres_Manuales.json"); if(s) { let o = JSON.parse(s); for(let p in o) await saveStore('manuales', p, o[p]); } }
+            if(cloudData.fraudes) { let s = await fetchCloud("Fraudes.json"); if(s) { let o = JSON.parse(s); for(let p in o) await saveStore('fraudes', p, o[p]); } }
+
+            let localMag = new Set(await getAllKeys('magestic'));
+            let localMeses = new Set(await getAllKeys('detalle_mes'));
+            let localFechasSet = new Set(await getAllKeys('fechas'));
+            let allCloudDays = new Set([...cloudData.ewm, ...cloudData.totes, ...cloudData.empeno, ...cloudData.k22, ...cloudData.k24, ...cloudData.v01, ...cloudData.k23, ...cloudData.cerradoras]);
+            
+            let backgroundDays = []; let priorityDayTasks = [];
+
+            // Solo descargamos los días que corresponden al Ciclo Activo
+            for(let d of allCloudDays) {
+                if(isPriorityDay(d)) { priorityDayTasks.push(async () => await syncDayFromCloud(d, cloudData, localFechasSet)); } 
+                else if(!localFechasSet.has(d)) { backgroundDays.push(d); }
+            }
+            await Promise.all(priorityDayTasks.map(t => t()));
+
+            loader(false);
+            if(backgroundDays.length > 0) {
+                setCloudStatus("🔄 Bajando Historial...");
+            } else { 
+                IS_FULL_HISTORY_DOWNLOADED = true; setCloudStatus("☁️ Sincronizado Nube"); 
+            }
+
+            await renderCalendar(); await refreshGlobalMemory(); await renderHistoricalDashboards();
+            startBackgroundSync(cloudData, localMag, localMeses, backgroundDays, localFechasSet);
+        } catch(e) { console.error(e); setCloudStatus("🗄️ Modo Local Activo", true); loader(false); await renderCalendar(); await refreshGlobalMemory(); await renderHistoricalDashboards(); }
+    };
+
+    async function readExcelAsArrays(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = e => { try { const wb = XLSX.read(e.target.result, {type: 'array', cellDates: true}); resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, defval: "", raw: true})); } catch(err){reject(err);} }; reader.readAsArrayBuffer(file); }); }
+    async function readExcel(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = e => { try { const wb = XLSX.read(e.target.result, {type: 'array', cellDates: true}); resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval: "", raw: true})); } catch(err){reject(err);} }; reader.readAsArrayBuffer(file); }); }
+
+    async function handleMajesticUpload(input) {
+        if(!input.files || input.files.length === 0) return; loader(true, "Guardando Majestic & Cruzando...");
+        try {
+            let r = await readExcelAsArrays(input.files[0]); let d = new Date(); d.setMonth(d.getMonth() + viewMonthOffset); let monthKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            let magesticData = [];
+            for (let i = 1; i < r.length; i++) {
+                let row = r[i]; if (!row || row.length < 2) continue; 
+                let emb = String(row[0] || '').replace(/^[="]+|["]+$/g, '').trim(); let ped = cleanPedido(row[1]); let pal = String(row[7] || '').trim(); let fCierre = parseDateToYYYYMMDD(row[9], "0000-00-00"); 
+                if (ped !== "") magesticData.push({ Pedido: ped, Pallet: pal, Embalaje: emb, FechaCierre: fCierre });
+            }
+            await saveStore('magestic', monthKey, magesticData); syncCloudData("Magestic_" + monthKey + ".json", magesticData); 
+            await reconstruirTodaLaHistoria(); toast(`✅ Majestic cruzado (${monthKey})`);
+        } catch(e) { console.error(e); toast("Error en Majestic: " + e.message); } finally { loader(false); input.value = ''; }
+    }
+
+    async function openModal(dateStr) {
+        try {
+            if(isLockedByCycle(dateStr) && !IS_FULL_HISTORY_DOWNLOADED) {
+                alert("⚠️ Este mes ya está CERRADO (Corte del 25 al 25).\nDebes esperar a que el 'Historial Completo' termine de descargar en segundo plano para modificarlo.");
+                return;
+            }
+
+            retroDateTarget = dateStr; document.getElementById('uploadModal').style.display = 'flex'; setTxt('modalDate', dateStr);
+            ['Totes','Puntos','Ewm','Empeno'].forEach(id => { let el = document.getElementById('modal'+id); if(el) el.value = ''; setTxt('fn-'+id.toLowerCase(), "Clic aquí para subir"); let dz = document.getElementById('dz-modal'+id); if(dz) dz.classList.remove('loaded'); setTxt('time-'+id.toLowerCase(), ""); });
+            let totes = await getStore('totes', dateStr); let puntos = await getStore('puntos', dateStr); let ewm = await getStore('ewm', dateStr); let empeno = await getStore('empeno', dateStr);
+            if(totes && totes.length > 0) { document.getElementById('dz-modalTotes').classList.add('loaded'); setTxt('fn-totes', "✅ Guardado"); setTxt('time-totes', "Corte: " + getMaxTime(totes, 'FechaRaw')); }
+            if(puntos && puntos.length > 0) { document.getElementById('dz-modalPuntos').classList.add('loaded'); setTxt('fn-puntos', "✅ Guardado"); setTxt('time-puntos', "Corte: " + getMaxTime(puntos, 'FechaRaw')); }
+            if(ewm && ewm.length > 0) { document.getElementById('dz-modalEwm').classList.add('loaded'); setTxt('fn-ewm', "✅ Guardado"); }
+            if(empeno && empeno.length > 0) { document.getElementById('dz-modalEmpeno').classList.add('loaded'); setTxt('fn-empeno', "✅ Guardado"); }
+        } catch(e) { console.error("Error abriendo modal:", e); }
+    }
+
+    ['Totes','Puntos','Ewm','Empeno'].forEach(id => { let el = document.getElementById('modal'+id); if(el) { el.addEventListener('change', function(e) { let files = e.target.files; if(files && files.length > 0) { document.getElementById('dz-modal'+id).classList.add('loaded'); setTxt('fn-'+id.toLowerCase(), `📦 ${files.length} archivo(s)`); } }); } });
+
+    async function procesarCargaDia() {
+        if(!retroDateTarget) return; let d = retroDateTarget;
+        let fileTotes = document.getElementById('modalTotes').files[0]; let filePuntos = document.getElementById('modalPuntos').files[0]; let filesEwm = document.getElementById('modalEwm').files; let fileEmpeno = document.getElementById('modalEmpeno').files[0];
+        document.getElementById('uploadModal').style.display = 'none'; loader(true, "Procesando Inputs...");
+        let arrTotes = [], arrPuntos = [], arrEmpeno = [], arrEwm = [];
+
+        try {
+            if(fileTotes) { let r = await readExcel(fileTotes); arrTotes = r.map(x => ({ Pedido: cleanPedido(buscarColumna(x, COLS.PEDIDO)), Tote: cleanTote(buscarColumna(x, COLS.TOTE)), Estatus: String(buscarColumna(x, COLS.ESTATUS) || 'Desconocido').trim(), FechaRaw: buscarColumna(x, COLS.FECHA) })); await saveStore('totes', d, arrTotes); syncCloudData("Totes_"+d+".json", arrTotes); }
+            if(filePuntos) { 
+                let r = await readExcel(filePuntos); let validPts = ['K22','K24','V01', 'K23']; 
+                r.forEach(x => { 
+                    let pto = String(buscarColumna(x, COLS.PUNTO) || '').trim().toUpperCase(); 
+                    if(validPts.includes(pto) || pto.includes('CERRADORA')) { let fRaw = buscarColumna(x, COLS.FECHA); arrPuntos.push({ Tote: cleanTote(buscarColumna(x, COLS.TOTE)), Punto: pto, FechaParsed: parseDateToYYYYMMDD(fRaw, d), FechaRaw: fRaw }); } 
+                }); 
+                await saveStore('puntos', d, arrPuntos); 
+                let k22 = arrPuntos.filter(x => x.Punto === 'K22'); let k24 = arrPuntos.filter(x => x.Punto === 'K24'); let v01 = arrPuntos.filter(x => x.Punto === 'V01'); let k23 = arrPuntos.filter(x => x.Punto === 'K23'); let cerradoras = arrPuntos.filter(x => x.Punto.includes('CERRADORA'));
+                if(k22.length) syncCloudData("K22_"+d+".json", k22); if(k24.length) syncCloudData("K24_"+d+".json", k24); if(v01.length) syncCloudData("V01_"+d+".json", v01); if(k23.length) syncCloudData("K23_"+d+".json", k23); if(cerradoras.length) syncCloudData("Cerradoras_"+d+".json", cerradoras); 
+            }
+            if(fileEmpeno) { let r = await readExcel(fileEmpeno); arrEmpeno = r.map(x => ({ Documento: cleanDocumento(buscarColumna(x, COLS.DOCUMENTO)), Ctd: Number(parseQty(buscarColumna(x, COLS.CTD_EMPENO))) || 0 })); await saveStore('empeno', d, arrEmpeno); syncCloudData("Empeno_"+d+".json", arrEmpeno); }
+            let ewmLoaded = false;
+            if(filesEwm && filesEwm.length > 0) {
+                for(let i = 0; i < filesEwm.length; i++) {
+                    let file = filesEwm[i]; let r = await readExcel(file); let name = (file.name || "").toLowerCase(); let lineaAsignada = name.includes('retail') ? 'Retail' : (name.includes('l2') || name.includes('linea 2') ? 'L2' : 'L1');
+                    let p = r.map(x => ({ Pedido: cleanPedido(buscarColumna(x, COLS.PEDIDO)), Fase: String(buscarColumna(x, COLS.FASE_EWM) || '').trim(), Documento: cleanDocumento(buscarColumna(x, COLS.DOCUMENTO)), Unidades: Number(parseQty(buscarColumna(x, COLS.CANTIDAD))), Linea: lineaAsignada }));
+                    arrEwm = arrEwm.concat(p);
+                }
+                await saveStore('ewm', d, arrEwm); syncCloudData("EWM_"+d+".json", arrEwm); ewmLoaded = true;
+            }
+
+            let log = await getStore('fechas', d) || { totes: false, puntos: false, ewm: false, empeno: false };
+            log.totes = fileTotes ? true : log.totes; log.puntos = filePuntos ? true : log.puntos; log.ewm = ewmLoaded ? true : log.ewm; log.empeno = fileEmpeno ? true : log.empeno;
+            await saveStore('fechas', d, log); DIAS_DISPONIBLES.add(d);
+            
+            toast("Archivos subidos. Construyendo Tablas..."); await reconstruirTodaLaHistoria(); toast("✅ Generado Exitosamente.");
+        } catch (e) { console.error(e); toast("❌ Error en carga: " + e.message); } finally { loader(false); }
+    }
+
+    function distributeAndSyncWeeks(mk, mesObj) {
+        let w1={}, w2={}, w3={}, w4={};
+        for(let d in mesObj) { let dayNum = parseInt(d.split('-')[2], 10); if(dayNum <= 7) w1[d] = mesObj[d]; else if(dayNum <= 14) w2[d] = mesObj[d]; else if(dayNum <= 21) w3[d] = mesObj[d]; else w4[d] = mesObj[d]; }
+        if(Object.keys(w1).length > 0) syncCloudData("Detalle_" + mk + "_W1.json", w1); if(Object.keys(w2).length > 0) syncCloudData("Detalle_" + mk + "_W2.json", w2); if(Object.keys(w3).length > 0) syncCloudData("Detalle_" + mk + "_W3.json", w3); if(Object.keys(w4).length > 0) syncCloudData("Detalle_" + mk + "_W4.json", w4);
+    }
+
+    async function reconstruirTodaLaHistoria() {
+        let dicc_global = await buildGlobalMajesticDict(); let dicc_manuales = await buildManualesDict(); let dicc_puntos = await buildGlobalPuntosDict(); let dicc_totes = await buildGlobalTotesDict(); let dicc_empeno = await buildGlobalEmpenoDict(); let dicc_fraudes = await buildFraudesDict();
+        let mesDetalleAgrupado = {};
+        for (let day of DIAS_DISPONIBLES) {
+            let filas = await buildDetalleForDay_Core(day, dicc_global, dicc_manuales, dicc_puntos, dicc_totes, dicc_empeno, dicc_fraudes);
+            let mk = day.substring(0, 7); if(!mesDetalleAgrupado[mk]) mesDetalleAgrupado[mk] = (await getStore('detalle_mes', mk)) || {}; mesDetalleAgrupado[mk][day] = filas;
+        }
+        for(let mk in mesDetalleAgrupado) { await saveStore('detalle_mes', mk, mesDetalleAgrupado[mk]); distributeAndSyncWeeks(mk, mesDetalleAgrupado[mk]); }
+        await renderCalendar(); await refreshGlobalMemory(); await renderHistoricalDashboards(); 
+    }
+
+    async function buildGlobalMajesticDict() {
+        let keys = await getAllKeys('magestic'); let dict = {};
+        for(let k of keys) {
+            let data = await getStore('magestic', k) || [];
+            data.forEach(m => {
+                if(!dict[m.Pedido]) dict[m.Pedido] = { fecha: "0000-00-00", lineas_pallet: 0, totesSet: new Set() };
+                if (m.Embalaje) dict[m.Pedido].totesSet.add(m.Embalaje);
+                if(m.Pallet && m.Pallet !== "undefined" && m.Pallet !== "") { dict[m.Pedido].lineas_pallet++; if (m.FechaCierre > dict[m.Pedido].fecha) dict[m.Pedido].fecha = m.FechaCierre; }
+            });
+        }
+        for(let p in dict) { dict[p].total_lineas = dict[p].totesSet.size > 0 ? dict[p].totesSet.size : 1; }
+        return dict; 
+    }
+
+    async function buildGlobalPuntosDict() { 
+        let keys = await getAllKeys('puntos'); let dict = {}; 
+        for(let k of keys) { let pts = await getStore('puntos', k) || []; pts.forEach(p => { let d = p.FechaParsed || parseDateToYYYYMMDD(p.FechaRaw, k); if (!dict[p.Tote] || d > dict[p.Tote].fecha) dict[p.Tote] = { fecha: d, scanner: p.Punto }; }); } return dict; 
+    }
+
+    async function buildGlobalTotesDict() { 
+        let keys = await getAllKeys('totes'); let dict = {}; 
+        for(let k of keys) { let ts = await getStore('totes', k) || []; ts.forEach(t => { if(!t.Pedido) return; if(!dict[t.Pedido]) dict[t.Pedido] = {}; let isFin = (t.Estatus || '').toUpperCase().includes('FINALIZADO'); if (!dict[t.Pedido][t.Tote]) { dict[t.Pedido][t.Tote] = { Tote: t.Tote, Estatus: t.Estatus, Fecha: t.FechaRaw }; } else if (isFin) { dict[t.Pedido][t.Tote].Estatus = t.Estatus; dict[t.Pedido][t.Tote].Fecha = t.FechaRaw; } }); } 
+        for (let ped in dict) dict[ped] = Object.values(dict[ped]); return dict; 
+    }
+
+    async function buildGlobalEmpenoDict() { let keys = await getAllKeys('empeno'); let globalDict = {}; for(let k of keys) { let emp = await getStore('empeno', k) || []; let dailySum = {}; emp.forEach(e => { if (e.Documento) dailySum[e.Documento] = (dailySum[e.Documento] || 0) + e.Ctd; }); for(let doc in dailySum) { globalDict[doc] = Math.max(globalDict[doc] || 0, dailySum[doc]); } } return globalDict; }
+    async function buildManualesDict() { let keys = await getAllKeys('manuales'); let dict = {}; for(let k of keys) { dict[k] = await getStore('manuales', k); } return dict; }
+    async function buildFraudesDict() { let keys = await getAllKeys('fraudes'); let dict = {}; for(let k of keys) { dict[k] = await getStore('fraudes', k); } return dict; }
+
+    async function buildDetalleForDay_Core(d, magesticDict, manualesDict, puntosDict, totesDict, empenoDict, fraudesDict) {
+        let ewm = await getStore('ewm', d) || []; if(!ewm || ewm.length === 0) return [];
+        let uniqueEWM = new Map();
+        ewm.forEach(e => { if(!e.Pedido) return; if(fraudesDict && fraudesDict[e.Pedido]) return; if(!uniqueEWM.has(e.Pedido)) uniqueEWM.set(e.Pedido, { Linea: e.Linea, Fase: e.Fase, Documento: e.Documento, Unidades: 0 }); uniqueEWM.get(e.Pedido).Unidades += e.Unidades; });
+
+        let rows_detalle = []; let todayStr = getToday(); let isPastUpload = (d < todayStr);
+
+        for (let [ped, val] of uniqueEWM.entries()) {
+            let isRetail = (val.Linea === 'Retail'); let qty = val.Unidades;
+            if (isRetail && val.Documento && empenoDict[val.Documento] !== undefined && empenoDict[val.Documento] > 0) { qty = empenoDict[val.Documento]; }
+
+            let listTotes = totesDict[ped] || []; let meta_cajas = 1; let c_maj = 0; let f_maj = "Sin registro";
+            if (!isRetail && magesticDict[ped]) { meta_cajas = magesticDict[ped].total_lineas > 0 ? magesticDict[ped].total_lineas : 1; c_maj = magesticDict[ped].lineas_pallet; f_maj = (magesticDict[ped].fecha !== "0000-00-00") ? magesticDict[ped].fecha : "Sin registro"; } else if (listTotes.length > 0) { meta_cajas = listTotes.length; }
+
+            let c_pto = 0; let f_pto = "Sin registro"; let c_tot = 0; let f_tot = "Sin registro"; let maxDatePto = "0000-00-00"; let maxDateTot = "0000-00-00"; let maxScanner = "Sin lectura"; let estatusKnapp = "Sin Totes"; let totesNoFin = 0;
+
+            if (listTotes.length > 0) {
+                listTotes.forEach(t => {
+                    if (puntosDict[t.Tote]) { c_pto++; if (puntosDict[t.Tote].fecha > maxDatePto) { maxDatePto = puntosDict[t.Tote].fecha; maxScanner = puntosDict[t.Tote].scanner; } }
+                    let st = (t.Estatus || '').toUpperCase(); estatusKnapp = st;
+                    if (st === 'FINALIZADO' || st === 'FINALIZADO MANUAL') { c_tot++; let f = parseDateToYYYYMMDD(t.Fecha, ""); if (f && f !== "" && f > maxDateTot) maxDateTot = f; } else { totesNoFin++; }
+                });
+                if (c_pto > 0) f_pto = maxDatePto; if (c_tot > 0 && c_tot >= meta_cajas) f_tot = maxDateTot !== "0000-00-00" ? maxDateTot : "Sin registro"; 
+            } 
+
+            let isClosed = false; let fecha_final = "Pendiente"; let estatus_str = "PENDIENTE";
+            if (isRetail) {
+                if (c_pto >= meta_cajas && c_pto > 0) { isClosed = true; fecha_final = f_pto !== "Sin registro" ? f_pto : d; estatus_str = "FINALIZADO"; } 
+                else if (manualesDict[ped]) { isClosed = true; fecha_final = manualesDict[ped].fecha; estatus_str = "CIERRE MANUAL"; }
+                else if (c_tot >= meta_cajas && c_tot > 0) { 
+                    if (isPastUpload) { isClosed = true; fecha_final = f_tot !== "Sin registro" ? f_tot : "Fecha Desconocida"; estatus_str = "FINALIZADO"; } 
+                    else { isClosed = false; fecha_final = "Pendiente (Requiere Manual)"; estatus_str = "PENDIENTE (Knapp Ok - Cierre Pendiente)"; }
+                }
+            } else {
+                if (c_maj >= meta_cajas && c_maj > 0) { isClosed = true; fecha_final = f_maj !== "Sin registro" ? f_maj : d; estatus_str = "FINALIZADO"; } 
+                else if (c_pto >= meta_cajas && c_pto > 0) { isClosed = true; fecha_final = f_pto !== "Sin registro" ? f_pto : d; estatus_str = "FINALIZADO"; } 
+                else if (c_tot >= meta_cajas && c_tot > 0) { isClosed = true; fecha_final = f_tot !== "Sin registro" ? f_tot : "Fecha Desconocida"; estatus_str = "FINALIZADO"; } 
+                else if (manualesDict[ped]) { isClosed = true; fecha_final = manualesDict[ped].fecha; estatus_str = "CIERRE MANUAL"; }
+            }
+            rows_detalle.push({ "Día Carga EWM": d, "Fase": val.Fase, "Pedido": ped, "Línea": val.Linea, "Cajas Meta": meta_cajas, "Cajas Majestic": c_maj, "Cajas Puntos": c_pto, "Cajas Totes": c_tot, "Último Escáner": maxScanner, "Estatus Knapp": estatusKnapp, "Totes No Fin": totesNoFin, "F. Cierre Majestic": f_maj, "F. Cierre Escáner": f_pto, "F. Cierre Totes": f_tot, "Unidades Pedido": qty, "Estatus": estatus_str, "Fecha Cierre Final": fecha_final });
+        }
+        return rows_detalle;
+    }
+
+    async function abrirGestorFraudes() {
+        document.getElementById('modalFraudes').style.display = 'flex'; let fraudes = await buildFraudesDict(); let tbody = document.getElementById('fraudes-tbody'); tbody.innerHTML = '';
+        let keys = Object.keys(fraudes); if(keys.length === 0) { tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px;">No hay pedidos en la Lista Negra.</td></tr>`; return; }
+        let html = ''; keys.forEach(p => { html += `<tr class="hover-row"><td><b>${p}</b></td><td>${fraudes[p].registrado}</td><td style="text-align:right;"><button class="btn-outline" style="color:var(--danger); border-color:var(--danger); padding:4px 8px;" onclick="eliminarFraude('${p}')">Restaurar</button></td></tr>`; }); tbody.innerHTML = html;
+    }
+    async function guardarFraudes() {
+        let txt = document.getElementById('inputFraudes').value; if(!txt.trim()) return; let peds = txt.split(/[\n, \t]+/).map(x => cleanPedido(x)).filter(x => x !== ""); if(peds.length === 0) return;
+        loader(true, "Bloqueando Pedidos..."); try { let todayDate = getToday(); for(let p of peds) { await saveStore('fraudes', p, { registrado: todayDate }); } document.getElementById('inputFraudes').value = ''; let fullFraudes = await buildFraudesDict(); syncCloudData("Fraudes.json", fullFraudes); await reconstruirTodaLaHistoria(); toast(`✅ ${peds.length} pedidos bloqueados.`); abrirGestorFraudes(); } catch(e) { console.error(e); toast("Error guardando fraude."); } loader(false);
+    }
+    async function eliminarFraude(ped) {
+        loader(true, "Restaurando pedido..."); try { let db = await initDB(); await new Promise((resolve, reject) => { let tx = db.transaction('fraudes', 'readwrite'); tx.objectStore('fraudes').delete(ped); tx.oncomplete = () => resolve(); tx.onerror = e => reject(e); }); let fullFraudes = await buildFraudesDict(); syncCloudData("Fraudes.json", fullFraudes); await reconstruirTodaLaHistoria(); toast(`✅ Pedido ${ped} restaurado.`); abrirGestorFraudes(); } catch(e) { console.error(e); toast("Error restaurando pedido."); } loader(false);
+    }
+
+    async function abrirGestorAtrasados() {
+        if(TABLA_DETALLE_GLOBAL.length === 0) { toast("Primero actualiza el Dashboard."); return; }
+        document.getElementById('modalAtrasados').style.display = 'flex'; let tbody = document.getElementById('atrasados-tbody'); tbody.innerHTML = '';
+        let pendientes = TABLA_DETALLE_GLOBAL.filter(x => x.Estatus.includes('PENDIENTE') && daysBetween(x["Día Carga EWM"]) >= 2);
+        if(pendientes.length === 0) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px;">🎉 ¡Excelente! No tienes pedidos atrasados.</td></tr>`; return; }
+        
+        let html = '';
+        pendientes.sort((a,b) => a["Día Carga EWM"].localeCompare(b["Día Carga EWM"])).forEach(p => {
+            let flagKnapp = p.Estatus.includes('Knapp Ok') ? '⚠️ KNAPP OK' : p["Estatus Knapp"];
+            html += `<tr class="hover-row"><td><b>${p.Pedido}</b></td><td>${p["Día Carga EWM"]}</td><td>${p["Línea"]}</td><td>${p["Fase"]}</td><td>${p["Último Escáner"]}</td><td style="color:var(--warning-dark); font-weight:800;">${flagKnapp}</td><td style="color:var(--danger); font-weight:bold;">${daysBetween(p["Día Carga EWM"])} días</td><td style="background:var(--w-cyan-bg);"><input type="date" class="form-control input-atrasado" data-pedido="${p.Pedido}" style="width:130px; display:inline-block; padding:4px;"></td></tr>`;
+        }); tbody.innerHTML = html;
+    }
+
+    async function guardarAtrasadosMasivo() {
+        if(isLockedByCycle(getToday()) && !IS_FULL_HISTORY_DOWNLOADED) {
+            alert("⚠️ Este mes ya está CERRADO (Corte del 25 al 25).\nDebes esperar a que el 'Historial Completo' termine de descargar en segundo plano para modificarlo.");
+            return;
+        }
+        let inputs = document.querySelectorAll('.input-atrasado'); let guardados = 0; loader(true, "Guardando cierres masivos...");
+        try { let fullManuales = await buildManualesDict(); for(let inp of inputs) { if(inp.value) { let ped = inp.getAttribute('data-pedido'); await saveStore('manuales', ped, { fecha: inp.value }); fullManuales[ped] = { fecha: inp.value }; guardados++; } } if(guardados > 0) { syncCloudData("Cierres_Manuales.json", fullManuales); await reconstruirTodaLaHistoria(); toast(`✅ ${guardados} pedidos cerrados manualmente.`); abrirGestorAtrasados(); } else { toast("⚠️ No seleccionaste ninguna fecha."); } } catch(e) { console.error(e); toast("Error guardando masivo."); } loader(false);
+    }
+    
+    function descargarAtrasados() { let pends = TABLA_DETALLE_GLOBAL.filter(x => x.Estatus.includes('PENDIENTE') && daysBetween(x["Día Carga EWM"]) >= 2); if(pends.length === 0) { toast("No hay atrasados."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Atrasados Masivo"); XLSX.writeFile(wb, "Reporte_Atrasados_V32.xlsx"); }
+
+    async function refreshGlobalMemory() { TABLA_DETALLE_GLOBAL = []; let localMeses = await getAllKeys('detalle_mes'); for (let mk of localMeses) { let mesObj = await getStore('detalle_mes', mk); if (mesObj) { for (let day in mesObj) { TABLA_DETALLE_GLOBAL = TABLA_DETALLE_GLOBAL.concat(mesObj[day]); } } } }
+
+    async function renderHistoricalDashboards() {
+        let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; if(!st || !ed) return;
+        if (TABLA_DETALLE_GLOBAL.length === 0) await refreshGlobalMemory();
+
+        let tblRangoIngresos = TABLA_DETALLE_GLOBAL.filter(x => x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed);
+        let tblRangoCierres = TABLA_DETALLE_GLOBAL.filter(x => (x.Estatus === "FINALIZADO" || x.Estatus === "CIERRE MANUAL") && x["Fecha Cierre Final"] >= st && x["Fecha Cierre Final"] <= ed);
+        let tblRangoPendientes = TABLA_DETALLE_GLOBAL.filter(x => x.Estatus.includes('PENDIENTE') && x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed);
+
+        let res_ingresos = {}; let netoIngresos = 0, netoCierres = 0, netoPendientes = 0;
+        let l1IngPeds = 0; let l2IngPeds = 0; let totalIngPeds = 0;
+        
+        tblRangoIngresos.forEach(r => {
+            let d_ing = r["Día Carga EWM"]; let qty = r["Unidades Pedido"]; let lin = r["Línea"];
+            if(!res_ingresos[d_ing]) res_ingresos[d_ing] = { ped:0, unds:0, l1_ped:0, l1_unds:0, l2_ped:0, l2_unds:0, ret_ped:0, ret_unds:0 };
+            let bI = res_ingresos[d_ing]; bI.ped++; bI.unds += qty; totalIngPeds++;
+            if(lin === 'L1') { bI.l1_ped++; bI.l1_unds += qty; l1IngPeds++; } else if(lin === 'L2') { bI.l2_ped++; bI.l2_unds += qty; l2IngPeds++; } else if(lin === 'Retail') { bI.ret_ped++; bI.ret_unds += qty; }
+            netoIngresos += qty;
+        });
+
+        let pctL1 = totalIngPeds > 0 ? Math.round((l1IngPeds / totalIngPeds) * 100) : 0;
+        let pctL2 = totalIngPeds > 0 ? Math.round((l2IngPeds / totalIngPeds) * 100) : 0;
+
+        let res_cierres = {}; let totalPedidosCerrados = 0, totalUnCerradas = 0, unL1 = 0, unL2 = 0, unRet = 0, totalTotes = 0;
+        tblRangoCierres.forEach(r => {
+            let d_fin = r["Fecha Cierre Final"]; let qty = r["Unidades Pedido"]; let lin = r["Línea"];
+            if(!res_cierres[d_fin]) res_cierres[d_fin] = { ped:0, unds:0, l1:0, l2:0, ret:0, totes:0 };
+            let bC = res_cierres[d_fin]; bC.ped++; bC.unds += qty; bC.totes += r["Cajas Meta"]; 
+            if(lin === 'L1') bC.l1 += qty; else if(lin === 'L2') bC.l2 += qty; else if(lin === 'Retail') bC.ret += qty;
+            netoCierres += qty; totalPedidosCerrados++; totalUnCerradas += qty; totalTotes += r["Cajas Meta"];
+            if(lin === 'L1') unL1 += qty; else if(lin === 'L2') unL2 += qty; else unRet += qty;
+        });
+
+        let pendsL1 = 0; let pendsL2 = 0;
+        tblRangoPendientes.forEach(r => { 
+            netoPendientes += r["Unidades Pedido"]; 
+            if(r["Línea"] === 'L1') pendsL1++; else if(r["Línea"] === 'L2') pendsL2++; 
+        });
+
+        document.getElementById('ingresos-tbody').innerHTML = '';
+        Object.keys(res_ingresos).sort().forEach(s => { let ig = res_ingresos[s]; document.getElementById('ingresos-tbody').insertAdjacentHTML('beforeend', `<tr class="hover-row"><td>${s}</td><td><b>${formatNumber(ig.ped)}</b></td><td><b style="color:var(--accent);">${formatNumber(ig.unds)}</b></td><td>${formatNumber(ig.l1_ped)}</td><td>${formatNumber(ig.l1_unds)}</td><td>${formatNumber(ig.l2_ped)}</td><td>${formatNumber(ig.l2_unds)}</td><td>${formatNumber(ig.ret_ped)}</td><td>${formatNumber(ig.ret_unds)}</td></tr>`); });
+
+        document.getElementById('resumen-tbody').innerHTML = '';
+        Object.keys(res_cierres).sort().forEach(s => { let cr = res_cierres[s]; let factor = cr.ped > 0 ? (cr.totes / cr.ped).toFixed(2) : "0.00"; document.getElementById('resumen-tbody').insertAdjacentHTML('beforeend', `<tr class="hover-row"><td>${s}</td><td><b>${formatNumber(cr.ped)}</b></td><td><span style="color:var(--accent); font-weight:bold;">${factor}</span></td><td><b class="td-estatus-fin">${formatNumber(cr.unds)}</b></td><td>${formatNumber(cr.l1)}</td><td>${formatNumber(cr.l2)}</td><td>${formatNumber(cr.ret)}</td></tr>`); });
+
+        let globalFactor = totalPedidosCerrados > 0 ? (totalTotes / totalPedidosCerrados).toFixed(2) : "0.00";
+        
+        // UI Métrica
+        setTxt('mega-factor', globalFactor); setTxt('un-l1', formatNumber(unL1)); setTxt('un-l2', formatNumber(unL2)); setTxt('un-ret', formatNumber(unRet)); 
+        setTxt('net-ingresos', formatNumber(netoIngresos)); setTxt('net-cierres', formatNumber(netoCierres)); setTxt('net-pendientes', formatNumber(netoPendientes));
+        
+        // Nuevas sub-metricas
+        setTxt('pct-l1', pctL1 + "%"); setTxt('pct-l2', pctL2 + "%");
+        setTxt('pend-l1', formatNumber(pendsL1)); setTxt('pend-l2', formatNumber(pendsL2));
+
+        if (document.getElementById('detalle-month-picker').value) renderTabDetalleMensual();
+    }
+
+    async function renderTabDetalleMensual() {
+        let dPicker = document.getElementById('detalle-month-picker'); if(!dPicker || !dPicker.value) return; let mk = dPicker.value; 
+        if (TABLA_DETALLE_GLOBAL.length === 0) await refreshGlobalMemory();
+
+        let filtrados = TABLA_DETALLE_GLOBAL.filter(r => { let cInTarget = (r.Estatus === "FINALIZADO" || r.Estatus === "CIERRE MANUAL") && r["Fecha Cierre Final"].startsWith(mk); let pBeforeOrInTarget = r.Estatus.includes("PENDIENTE") && r["Día Carga EWM"] <= mk + "-31"; return cInTarget || pBeforeOrInTarget; });
+        TABLA_DETALLE_MES = filtrados; TABLA_DETALLE_MES.sort((a, b) => a["Estatus"].localeCompare(b["Estatus"]) || a["Día Carga EWM"].localeCompare(b["Día Carga EWM"]));
+        document.getElementById('detalle-mes-tbody').innerHTML = `✅ Base <b>${mk}</b> preparada y mapeada en la memoria (${formatNumber(TABLA_DETALLE_MES.length)} pedidos).<br><br>Haz clic en <b>"📥 Bajar Todo a Excel"</b> para extraer la trazabilidad completa.`;
+    }
+
+    function descargarTablaDetalle() { if(TABLA_DETALLE_MES.length === 0) { toast("No hay datos preparados."); return; } const ws = XLSX.utils.json_to_sheet(TABLA_DETALLE_MES); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Tabla Detalle CF"); XLSX.writeFile(wb, `Reporte_Detalle_${document.getElementById('detalle-month-picker').value}.xlsx`); }
+    function descargarPendientes() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let pends = TABLA_DETALLE_GLOBAL.filter(x => x["Estatus"].includes("PENDIENTE") && x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed); if(pends.length === 0) { toast("No hay pendientes."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pendientes Completos"); XLSX.writeFile(wb, "Reporte_Pendientes_V32.xlsx"); }
+    function descargarIngresos() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let ingresosRango = TABLA_DETALLE_GLOBAL.filter(x => x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed).map(x => ({ "Fecha Carga EWM": x["Día Carga EWM"], "Pedido": x["Pedido"], "Línea": x["Línea"], "Unidades": x["Unidades Pedido"] })); if(ingresosRango.length === 0) { toast("No hay cargas EWM."); return; } const ws = XLSX.utils.json_to_sheet(ingresosRango); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Cargas EWM"); XLSX.writeFile(wb, "Reporte_Ingresos_EWM.xlsx"); }
+
+    async function renderCalendar() {
+        let d = new Date(); d.setMonth(d.getMonth() + viewMonthOffset); let year = d.getFullYear(); let month = d.getMonth(); setTxt('cal-month-name', `${["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][month]} ${year}`);
+        let firstDay = new Date(year, month, 1).getDay(); firstDay = firstDay === 0 ? 6 : firstDay - 1; let daysInMonth = new Date(year, month + 1, 0).getDate(); let todayStr = getToday(); let hL = "";
+        for(let i=0; i<firstDay; i++) hL += "<div></div>";
+        for(let i=1; i<=daysInMonth; i++) {
+            let cellDate = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            if (cellDate > todayStr) hL += `<div class="cal-day" style="opacity:0.3">${i}</div>`; else { let cls = DIAS_DISPONIBLES.has(cellDate) ? 'cal-green' : 'cal-red'; hL += `<div class="cal-day ${cls}" onclick="openModal('${cellDate}')">${i}</div>`; }
+        }
+        document.getElementById('calendar-container').innerHTML = hL;
+        let monthKey = `${year}-${String(month+1).padStart(2,'0')}`; let mag = await getStore('magestic', monthKey); let btn = document.getElementById('btn-majestic');
+        if(btn) { if (mag) { btn.classList.add('btn-majestic-loaded'); btn.classList.remove('btn-outline'); btn.innerHTML = `✅ Majestic Local (${monthKey})`; } else { btn.classList.add('btn-outline'); btn.classList.remove('btn-majestic-loaded'); btn.innerHTML = `📥 Subir Majestic`; } }
+    }
+    function changeCalMonth(offset) { viewMonthOffset += offset; renderCalendar(); }
+</script>
+</body>
+</html>
