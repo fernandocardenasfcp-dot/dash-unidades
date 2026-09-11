@@ -59,8 +59,8 @@
         .net-cards-wrapper { display:flex; justify-content:space-between; gap:20px; text-align:center; margin-bottom:20px; flex-wrap:wrap;}
         .net-card { flex:1; min-width:300px; padding:25px 20px; border-radius:16px; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; box-shadow:0 10px 25px rgba(0,0,0,0.15); transition:transform 0.2s; position: relative;}
         .net-card:hover { transform:translateY(-5px); }
-        .net-title { font-size:15px; font-weight:900; opacity:0.9; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;}
-        .net-value { font-size:42px; font-weight:900; letter-spacing:-1px;}
+        .net-title { font-size:16px; font-weight:900; opacity:0.9; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;}
+        .net-value { font-size:46px; font-weight:900; letter-spacing:-1px;}
         
         .bg-captadas { background: linear-gradient(135deg, var(--accent) 0%, #005bb5 100%); padding-bottom: 20px;}
         .bg-finalizadas { background: linear-gradient(135deg, var(--success) 0%, #248a3d 100%); padding-bottom: 20px;}
@@ -69,8 +69,8 @@
         /* SUB-MÉTRICAS INTEGRADAS */
         .stats-sub-row { display:flex; justify-content:space-between; width:100%; margin-top:15px; font-size:11px; opacity:0.95; border-top:1px solid rgba(255,255,255,0.3); padding-top:12px; gap:8px;}
         .stats-sub-item { display:flex; flex-direction:column; align-items:center; flex:1;}
-        .stats-sub-val { font-size:14px; font-weight:900;}
-        .stats-sub-lbl { font-size:9px; font-weight:700; text-transform:uppercase;}
+        .stats-sub-val { font-size:16px; font-weight:900;}
+        .stats-sub-lbl { font-size:10px; font-weight:700; text-transform:uppercase;}
 
         .td-estatus-fin { color: var(--success); font-weight:900; }
         .td-estatus-pen { color: var(--danger); font-weight:900; }
@@ -144,7 +144,7 @@
             <h3 style="margin:0; color:var(--danger); font-size:16px;">🛑 Lista Negra (Fraudes)</h3>
             <button class="btn-outline" onclick="document.getElementById('modalFraudes').style.display='none'">X</button>
         </div>
-        <textarea id="inputFraudes" class="form-control" rows="2" placeholder="Pega pedidos cancelados aquí..."></textarea>
+        <textarea id="inputFraudes" class="form-control" rows="2" placeholder="Pega pedidos cancelados aquí (separados por espacio o coma)..."></textarea>
         <button class="btn-primary" style="background:var(--danger); margin-top:10px;" onclick="guardarFraudes()">🚫 Bloquear Pedidos</button>
         <div class="table-container" style="overflow-y:auto; flex:1; margin-top:15px;">
             <table style="width:100%;">
@@ -167,7 +167,7 @@
 
     <div class="tabs-container">
         <button class="tab-btn active" id="btn-tab-1" onclick="switchTab('1')">📊 Resumen Operativo</button>
-        <button class="tab-btn" id="btn-tab-2" onclick="switchTab('2')">📋 Base Detalle</button>
+        <button class="tab-btn" id="btn-tab-2" onclick="switchTab('2')">📋 Sala de Máquinas</button>
     </div>
 
     <!-- ================= PESTAÑA 1 (DASHBOARD PURO) ================= -->
@@ -186,21 +186,27 @@
             </div>
         </div>
 
-        <!-- NETEO MATEMÁTICO GIGANTE (ACTUALIZADO V32) -->
+        <!-- NETEO MATEMÁTICO GIGANTE -->
         <div class="net-cards-wrapper">
             <!-- CAPTADAS -->
             <div class="net-card bg-captadas">
-                <div class="net-title">Unidades Captadas</div>
+                <div class="net-title">UNIDADES CAPTADAS</div>
                 <div class="net-value" id="net-ingresos">0</div>
                 <div class="stats-sub-row">
-                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-lbl">L1:</span><span class="stats-sub-val" id="pct-l1">0%</span></div>
-                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-lbl">L2:</span><span class="stats-sub-val" id="pct-l2">0%</span></div>
+                    <div class="stats-sub-item">
+                        <span class="stats-sub-lbl">Distribución L1</span>
+                        <span class="stats-sub-val" id="pct-l1">0%</span>
+                    </div>
+                    <div class="stats-sub-item">
+                        <span class="stats-sub-lbl">Distribución L2</span>
+                        <span class="stats-sub-val" id="pct-l2">0%</span>
+                    </div>
                 </div>
             </div>
             
             <!-- FINALIZADAS -->
             <div class="net-card bg-finalizadas">
-                <div class="net-title">Unidades Finalizadas</div>
+                <div class="net-title">UNIDADES FINALIZADAS</div>
                 <div class="net-value" id="net-cierres">0</div>
                 <div class="stats-sub-row">
                     <div class="stats-sub-item"><span class="stats-sub-val" id="un-l1">0</span><span class="stats-sub-lbl">Cierres L1</span></div>
@@ -212,11 +218,17 @@
             
             <!-- PENDIENTES -->
             <div class="net-card bg-pendientes">
-                <div class="net-title">Unidades Pendientes</div>
+                <div class="net-title">UNIDADES PENDIENTES</div>
                 <div class="net-value" id="net-pendientes">0</div>
                 <div class="stats-sub-row">
-                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-val" id="pend-l1">0</span><span class="stats-sub-lbl">Peds L1</span></div>
-                    <div class="stats-sub-item" style="flex-direction:row; gap:5px;"><span class="stats-sub-val" id="pend-l2">0</span><span class="stats-sub-lbl">Peds L2</span></div>
+                    <div class="stats-sub-item">
+                        <span class="stats-sub-lbl">Pedidos L1</span>
+                        <span class="stats-sub-val" id="pend-l1">0</span>
+                    </div>
+                    <div class="stats-sub-item">
+                        <span class="stats-sub-lbl">Pedidos L2</span>
+                        <span class="stats-sub-val" id="pend-l2">0</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -224,7 +236,7 @@
         <div class="section-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h4 style="margin:0; color:var(--primary);">📥 Registro de Ingresos EWM</h4>
-                <button class="btn-primary" style="background:var(--text-muted); padding:6px 12px;" onclick="descargarIngresos()">📥 Excel</button>
+                <button class="btn-primary" style="background:var(--text-muted); padding:6px 12px;" onclick="descargarIngresos()">📥 Bajar Excel</button>
             </div>
             <div class="table-container">
                 <table>
@@ -237,7 +249,7 @@
         <div class="section-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h4 style="margin:0; color:var(--primary);">🚀 Producción Física (Cierres)</h4>
-                <button class="btn-primary" style="background:var(--danger); padding:6px 12px;" onclick="descargarPendientes()">📥 Bajar Pendientes</button>
+                <button class="btn-primary" style="background:var(--danger); padding:6px 12px;" onclick="descargarPendientes()">📥 Bajar PENDIENTES</button>
             </div>
             <div class="table-container">
                 <table>
@@ -252,10 +264,10 @@
     <div id="tab-2" class="tab-content">
         
         <div class="section-box" style="display:flex; gap: 20px; align-items:flex-start; flex-wrap: wrap;">
-            <!-- CALENDARIO AHORA ESTÁ AQUÍ -->
+            <!-- CALENDARIO -->
             <div style="flex: 1; min-width: 300px;">
                 <h3 style="margin:0 0 10px 0; color:var(--primary);">Carga Diaria (EWM / Totes)</h3>
-                <p style="font-size:11px; color:var(--text-muted);">Clic en un día para cargar archivos Base. El mes se bloquea el día 5 del mes siguiente.</p>
+                <p style="font-size:11px; color:var(--text-muted); margin-top:0;">El ciclo de producción corta el 25 de cada mes.</p>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <button class="btn-outline" style="padding:2px 8px;" onclick="changeCalMonth(-1)">◀</button>
                     <h4 style="margin:0; color:var(--primary); font-size:14px;" id="cal-month-name">Mes</h4>
@@ -277,7 +289,7 @@
                 <!-- DESCARGA MENSUAL -->
                 <div style="padding:15px; border:1px solid var(--border); border-radius:12px; background:var(--bg-subtle);">
                     <h4 style="margin:0 0 10px 0; color:var(--primary);">Extracción Base Histórica</h4>
-                    <p style="font-size:11px; color:var(--text-muted); margin-top:0;">Descarga el consolidado trazable de un mes específico (Del 26 al 25).</p>
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:0;">Descarga la trazabilidad del mes (Del 26 al 25).</p>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <input type="month" id="detalle-month-picker" class="form-control" style="width:100%;">
                         <button class="btn-primary" onclick="renderTabDetalleMensual()">🔄 Preparar</button>
@@ -297,7 +309,6 @@
     // =======================================================
     // 🚨 CONFIGURACIÓN API REST (CLOUDFLARE PAGES)
     // =======================================================
-    // Como lo vas a hostear en Cloudflare Pages, la ruta es relativa:
     const API_URL = "/api/sync"; 
     
     // Variable global para saber si el historial completo ya bajó
@@ -325,7 +336,7 @@
     let viewMonthOffset = 0; 
     let retroDateTarget = null; 
 
-    // --- DB LOCAL V32 (NUEVA ARQUITECTURA CF) ---
+    // --- DB LOCAL V32 ---
     const DB_NAME = 'PTL_Database_Local_V32'; 
     function initDB() { 
         return new Promise((resolve, reject) => { 
@@ -404,18 +415,14 @@
 
     function isPriorityDay(dStr) { 
         let cycle = getActiveCycle();
-        // Es prioridad si pertenece al mes activo actual
         if (dStr >= cycle.currentStart && dStr <= cycle.currentEnd) return true;
-        // O si pertenece al mes anterior Y estamos en el periodo de gracia (día 1 al 5)
         if (dStr >= cycle.prevStart && dStr <= cycle.prevEnd && cycle.day <= 5) return true;
         return false;
     }
 
     function isLockedByCycle(dStr) {
         let cycle = getActiveCycle();
-        // Si el día es anterior al inicio del mes activo Y ya pasó el periodo de gracia (día > 5)
         if (dStr < cycle.currentStart && cycle.day > 5) return true;
-        // Si el día es más antiguo que el mes anterior (ya no es gracia)
         if (dStr < cycle.prevStart) return true;
         return false;
     }
@@ -498,7 +505,6 @@
             
             let backgroundDays = []; let priorityDayTasks = [];
 
-            // Solo descargamos los días que corresponden al Ciclo Activo
             for(let d of allCloudDays) {
                 if(isPriorityDay(d)) { priorityDayTasks.push(async () => await syncDayFromCloud(d, cloudData, localFechasSet)); } 
                 else if(!localFechasSet.has(d)) { backgroundDays.push(d); }
