@@ -1,6 +1,5 @@
 // =========================================================================
 // CLOUDFLARE PAGES FUNCTION (API) + R2 BUCKET
-// Este código maneja la lectura y escritura en tu Bucket R2.
 // =========================================================================
 
 export async function onRequest(context) {
@@ -10,11 +9,8 @@ export async function onRequest(context) {
 
     // 1. ENDPOINT GET (Lectura de archivos y listado)
     if (request.method === "GET") {
-        
-        // A. Listar todos los archivos para armar el rompecabezas
         if (action === 'syncInit') {
             try {
-                // PTL_BUCKET es el nombre de la variable que unirás a tu R2
                 const listed = await env.PTL_BUCKET.list();
                 let res = { ewm: [], totes: [], empeno: [], k22: [], k24: [], v01: [], k23: [], cerradoras: [], detalles: [], magestic: [], manuales: false, fraudes: false };
                 
@@ -39,7 +35,6 @@ export async function onRequest(context) {
             }
         }
 
-        // B. Leer un archivo en específico
         if (action === 'getFile') {
             const filename = url.searchParams.get('filename');
             if (!filename) return new Response("Falta filename", { status: 400 });
@@ -61,7 +56,6 @@ export async function onRequest(context) {
         try {
             const body = await request.json();
             if (body.filename && body.data) {
-                // Guarda el JSON directo en el Bucket R2
                 await env.PTL_BUCKET.put(body.filename, JSON.stringify(body.data));
                 return new Response(JSON.stringify({ status: 'ok' }), { headers: { 'Content-Type': 'application/json' } });
             }
