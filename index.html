@@ -53,7 +53,7 @@
         th, td{padding:10px; text-align:center; border:1px solid var(--border);}
         th{background:var(--bg-subtle);font-weight:900;color:var(--text-muted);text-transform:uppercase;font-size:11px;}
         td {font-weight: 600;}
-        #loader { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:99999; display:none; justify-content:center; align-items:center; flex-direction:column; font-weight:bold; color:var(--primary); font-size:18px;}
+        #loader { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:99999; display:none; justify-content:center; align-items:center; flex-direction:column; font-weight:bold; color:var(--primary); font-size:18px;}
         
         /* BLOQUES GIGANTES DE NETEO */
         .net-cards-wrapper { display:flex; justify-content:space-between; gap:20px; text-align:center; margin-bottom:20px; flex-wrap:wrap;}
@@ -94,11 +94,11 @@
 <body>
 
 <div id="loader">
-    <div style="font-size:40px; margin-bottom:10px; animation: pulse 1s infinite;">☁️</div>
+    <div style="font-size:50px; margin-bottom:10px; animation: pulse 1s infinite;">⚙️</div>
     <span id="loader-text" style="text-align:center; padding:0 20px;">Sincronizando Sistema...</span>
 </div>
 
-<!-- Modal Carga EWM (AHORA LLAMADO DESDE PESTAÑA 2) -->
+<!-- Modal Carga EWM -->
 <div id="uploadModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
     <div style="background:var(--bg-card); padding:20px; border-radius:16px; width:100%; max-width:700px; max-height:90vh; overflow-y:auto; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
         <h3 style="margin-top:0; color:var(--primary);">Carga EWM: <span id="modalDate" style="color:var(--accent);"></span></h3>
@@ -278,6 +278,14 @@
             </div>
 
             <div style="flex: 1; min-width: 300px; display:flex; flex-direction:column; gap:15px;">
+                
+                <!-- BOTÓN DE RECÁLCULO MANUAL (NUEVO V33) -->
+                <div style="padding:15px; border:1px solid var(--border); border-radius:12px; background:var(--bg-subtle);">
+                    <h4 style="margin:0 0 10px 0; color:var(--primary);">Motor de Datos</h4>
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:0;">Si subiste archivos directamente al Bucket R2, haz clic aquí para que el sistema los cruce y calcule el Dashboard.</p>
+                    <button class="btn-primary" style="width:100%; background:var(--primary); color:white;" onclick="forzarRecalculo()">⚙️ Forzar Recálculo Total</button>
+                </div>
+
                 <!-- MAJESTIC -->
                 <div style="padding:15px; border:1px solid var(--border); border-radius:12px; background:var(--bg-subtle);">
                     <h4 style="margin:0 0 10px 0; color:var(--primary);">Carga Majestic</h4>
@@ -336,8 +344,8 @@
     let viewMonthOffset = 0; 
     let retroDateTarget = null; 
 
-    // --- DB LOCAL V32 ---
-    const DB_NAME = 'PTL_Database_Local_V32'; 
+    // --- DB LOCAL V33 ---
+    const DB_NAME = 'PTL_Database_Local_V33'; 
     function initDB() { 
         return new Promise((resolve, reject) => { 
             let req = indexedDB.open(DB_NAME, 1); 
@@ -362,7 +370,7 @@
     async function getAllKeys(storeName) { let db = await initDB(); return new Promise(resolve => { let req = db.transaction(storeName).objectStore(storeName).getAllKeys(); req.onsuccess = () => resolve(req.result); req.onerror = () => resolve([]); }); }
 
     function switchTab(tabId) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active')); document.getElementById('tab-' + tabId).classList.add('active'); document.getElementById('btn-tab-' + tabId).classList.add('active'); if(tabId === '2') { let t = new Date(); document.getElementById('detalle-month-picker').value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`; } }
-    function resetApp() { if(confirm("⚠️ ¿Resetear BD Local? Esto recargará los datos desde la Nube.")) { indexedDB.deleteDatabase(DB_NAME); location.reload(); } }
+    function resetApp() { if(confirm("⚠️ ¿Limpiar Caché y Reload?")) { indexedDB.deleteDatabase(DB_NAME); location.reload(); } }
     function loader(show, txt='Procesando...') { document.getElementById('loader').style.display = show ? 'flex' : 'none'; document.getElementById('loader-text').innerText = txt; }
     function toast(msg) { const t=document.createElement('div'); t.className='toast'; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 5000); }
     function getToday() { let d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -429,11 +437,9 @@
 
     // --- COMUNICACIÓN CON API CLOUDFLARE (FETCH) ---
     async function syncCloudData(filename, data) {
-        setCloudStatus("☁️ Guardando Nube...");
         try {
             await fetch(API_URL, { method: 'POST', body: JSON.stringify({ filename: filename, data: data }), headers: { 'Content-Type': 'application/json' } });
-            setCloudStatus("☁️ Sincronizado Nube");
-        } catch(e) { console.error(e); setCloudStatus("❌ Error Nube", true); }
+        } catch(e) { console.error("Error subiendo a R2:", e); }
     }
 
     async function fetchCloud(filename) { 
@@ -464,11 +470,26 @@
         if(updated) { await saveStore('fechas', d, log); DIAS_DISPONIBLES.add(d); }
     }
 
+    // --- RECALCULO FORZADO MANUAL ---
+    async function forzarRecalculo() {
+        loader(true, "Cruzando y Recalculando historia completa...");
+        try {
+            await reconstruirTodaLaHistoria();
+            toast("✅ Recálculo maestro completado.");
+        } catch(e) {
+            console.error(e);
+            toast("❌ Error durante el recálculo.");
+        } finally {
+            loader(false);
+        }
+    }
+
     async function startBackgroundSync(cloudData, localMag, localMeses, backgroundDays, localFechasSet) {
         try {
             for(let m of cloudData.magestic) {
                 if(!localMag.has(m)) { let dataStr = await fetchCloud("Magestic_"+m+".json"); if(dataStr) await saveStore('magestic', m, JSON.parse(dataStr)); }
             }
+            
             let detailTasks = []; let downloadedMeses = {};
             for(let s of cloudData.detalles) {
                 let mk = s.replace("Detalle_","").split("_")[0]; let exist = await getStore('detalle_mes', mk);
@@ -477,8 +498,19 @@
             for(let i=0; i<detailTasks.length; i+=5) { await Promise.all(detailTasks.slice(i, i+5).map(t => t())); }
             for(let mk in downloadedMeses) await saveStore('detalle_mes', mk, downloadedMeses[mk]);
 
-            for(let i=0; i<backgroundDays.length; i+=5) { let chunk = backgroundDays.slice(i, i+5); await Promise.all(chunk.map(d => syncDayFromCloud(d, cloudData, localFechasSet))); }
+            let downloadedNewData = false;
+            for(let i=0; i<backgroundDays.length; i+=5) { 
+                let chunk = backgroundDays.slice(i, i+5); 
+                await Promise.all(chunk.map(d => syncDayFromCloud(d, cloudData, localFechasSet))); 
+                downloadedNewData = true;
+            }
             
+            // Auto-cruce si bajamos archivos crudos pero faltaban sus detalles
+            if (downloadedNewData) {
+                setCloudStatus("🔄 Cruzando Base Histórica...");
+                await reconstruirTodaLaHistoria();
+            }
+
             IS_FULL_HISTORY_DOWNLOADED = true;
             setCloudStatus("☁️ Sincronizado Nube"); await renderCalendar(); await refreshGlobalMemory(); await renderHistoricalDashboards();
         } catch (e) { console.error("Background sync error:", e); setCloudStatus("⚠️ Historial parcial", true); }
@@ -504,12 +536,24 @@
             let allCloudDays = new Set([...cloudData.ewm, ...cloudData.totes, ...cloudData.empeno, ...cloudData.k22, ...cloudData.k24, ...cloudData.v01, ...cloudData.k23, ...cloudData.cerradoras]);
             
             let backgroundDays = []; let priorityDayTasks = [];
+            let downloadedPriorityData = false;
 
             for(let d of allCloudDays) {
-                if(isPriorityDay(d)) { priorityDayTasks.push(async () => await syncDayFromCloud(d, cloudData, localFechasSet)); } 
+                if(isPriorityDay(d)) { 
+                    priorityDayTasks.push(async () => {
+                        let prev = localFechasSet.has(d);
+                        await syncDayFromCloud(d, cloudData, localFechasSet);
+                        if(!prev) downloadedPriorityData = true;
+                    }); 
+                } 
                 else if(!localFechasSet.has(d)) { backgroundDays.push(d); }
             }
             await Promise.all(priorityDayTasks.map(t => t()));
+
+            if(downloadedPriorityData) {
+                setCloudStatus("🔄 Cruzando Mes Activo...");
+                await reconstruirTodaLaHistoria();
+            }
 
             loader(false);
             if(backgroundDays.length > 0) {
@@ -593,7 +637,7 @@
             log.totes = fileTotes ? true : log.totes; log.puntos = filePuntos ? true : log.puntos; log.ewm = ewmLoaded ? true : log.ewm; log.empeno = fileEmpeno ? true : log.empeno;
             await saveStore('fechas', d, log); DIAS_DISPONIBLES.add(d);
             
-            toast("Archivos subidos. Construyendo Tablas..."); await reconstruirTodaLaHistoria(); toast("✅ Generado Exitosamente.");
+            toast("Archivos subidos. Cruzando Base..."); await reconstruirTodaLaHistoria(); toast("✅ Generado Exitosamente.");
         } catch (e) { console.error(e); toast("❌ Error en carga: " + e.message); } finally { loader(false); }
     }
 
@@ -722,7 +766,7 @@
         try { let fullManuales = await buildManualesDict(); for(let inp of inputs) { if(inp.value) { let ped = inp.getAttribute('data-pedido'); await saveStore('manuales', ped, { fecha: inp.value }); fullManuales[ped] = { fecha: inp.value }; guardados++; } } if(guardados > 0) { syncCloudData("Cierres_Manuales.json", fullManuales); await reconstruirTodaLaHistoria(); toast(`✅ ${guardados} pedidos cerrados manualmente.`); abrirGestorAtrasados(); } else { toast("⚠️ No seleccionaste ninguna fecha."); } } catch(e) { console.error(e); toast("Error guardando masivo."); } loader(false);
     }
     
-    function descargarAtrasados() { let pends = TABLA_DETALLE_GLOBAL.filter(x => x.Estatus.includes('PENDIENTE') && daysBetween(x["Día Carga EWM"]) >= 2); if(pends.length === 0) { toast("No hay atrasados."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Atrasados Masivo"); XLSX.writeFile(wb, "Reporte_Atrasados_V32.xlsx"); }
+    function descargarAtrasados() { let pends = TABLA_DETALLE_GLOBAL.filter(x => x.Estatus.includes('PENDIENTE') && daysBetween(x["Día Carga EWM"]) >= 2); if(pends.length === 0) { toast("No hay atrasados."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Atrasados Masivo"); XLSX.writeFile(wb, "Reporte_Atrasados_V33.xlsx"); }
 
     async function refreshGlobalMemory() { TABLA_DETALLE_GLOBAL = []; let localMeses = await getAllKeys('detalle_mes'); for (let mk of localMeses) { let mesObj = await getStore('detalle_mes', mk); if (mesObj) { for (let day in mesObj) { TABLA_DETALLE_GLOBAL = TABLA_DETALLE_GLOBAL.concat(mesObj[day]); } } } }
 
@@ -793,7 +837,7 @@
     }
 
     function descargarTablaDetalle() { if(TABLA_DETALLE_MES.length === 0) { toast("No hay datos preparados."); return; } const ws = XLSX.utils.json_to_sheet(TABLA_DETALLE_MES); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Tabla Detalle CF"); XLSX.writeFile(wb, `Reporte_Detalle_${document.getElementById('detalle-month-picker').value}.xlsx`); }
-    function descargarPendientes() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let pends = TABLA_DETALLE_GLOBAL.filter(x => x["Estatus"].includes("PENDIENTE") && x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed); if(pends.length === 0) { toast("No hay pendientes."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pendientes Completos"); XLSX.writeFile(wb, "Reporte_Pendientes_V32.xlsx"); }
+    function descargarPendientes() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let pends = TABLA_DETALLE_GLOBAL.filter(x => x["Estatus"].includes("PENDIENTE") && x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed); if(pends.length === 0) { toast("No hay pendientes."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pendientes Completos"); XLSX.writeFile(wb, "Reporte_Pendientes_V33.xlsx"); }
     function descargarIngresos() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let ingresosRango = TABLA_DETALLE_GLOBAL.filter(x => x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed).map(x => ({ "Fecha Carga EWM": x["Día Carga EWM"], "Pedido": x["Pedido"], "Línea": x["Línea"], "Unidades": x["Unidades Pedido"] })); if(ingresosRango.length === 0) { toast("No hay cargas EWM."); return; } const ws = XLSX.utils.json_to_sheet(ingresosRango); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Cargas EWM"); XLSX.writeFile(wb, "Reporte_Ingresos_EWM.xlsx"); }
 
     async function renderCalendar() {
