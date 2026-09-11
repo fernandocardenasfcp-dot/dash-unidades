@@ -1,13 +1,8 @@
-// =========================================================================
-// CLOUDFLARE PAGES FUNCTION (API) + R2 BUCKET
-// =========================================================================
-
 export async function onRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
 
-    // 1. ENDPOINT GET (Lectura de archivos y listado)
     if (request.method === "GET") {
         if (action === 'syncInit') {
             try {
@@ -51,7 +46,6 @@ export async function onRequest(context) {
         return new Response("Acción no válida", { status: 400 });
     }
 
-    // 2. ENDPOINT POST (Subir nuevos JSON a R2)
     if (request.method === "POST") {
         try {
             const body = await request.json();
