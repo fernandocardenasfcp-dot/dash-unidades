@@ -331,7 +331,7 @@
 
 <script>
     // =======================================================
-    // 🚨 CONFIGURACIÓN API REST V50 (LÓGICA INCREMENTAL SANA)
+    // 🚨 CONFIGURACIÓN API REST V51 (NO-CLONE BUGFIX)
     // =======================================================
     const API_URL = "/api/sync"; 
     const MIN_MONTH = "2026-07"; // Inicio del proyecto
@@ -360,7 +360,7 @@
     let chartInstance = null; 
     let MESES_SINCRONIZADOS = new Set();
 
-    const DB_NAME = 'PTL_Database_Local_V50'; 
+    const DB_NAME = 'PTL_Database_Local_V51'; 
     function initDB() { 
         return new Promise((resolve, reject) => { 
             let req = indexedDB.open(DB_NAME, 1); 
@@ -457,9 +457,10 @@
         } catch(e) { return null; }
     }
 
-    // --- CARGA INICIAL (SMART FETCHING) ---
+    // --- CARGA INICIAL ---
     window.onload = async () => {
         setupDropZones();
+        
         await refreshGlobalMemory();
         
         let t = getToday(); 
@@ -476,9 +477,22 @@
         try {
             let initRes = await fetch(API_URL + "?action=syncInit&_t=" + Date.now(), { cache: "no-store" });
             if (!initRes.ok) throw new Error("API No Configurada");
+            
+            let cloudData = JSON.parse(await initRes.text());
+            let activeMonths = new Set();
+            activeMonths.add(getToday().substring(0,7)); 
+            
+            let allCloudDates = [...(cloudData.ewm||[]), ...(cloudData.totes||[]), ...(cloudData.empeno||[])];
+            allCloudDates.forEach(d => { if(d && d.length >= 7) activeMonths.add(d.substring(0,7)); });
+            
+            if(cloudData.magestic) { cloudData.magestic.forEach(m => activeMonths.add(m.replace("Magestic_","").replace(".json",""))); }
+            
             let reqMonths = getRequiredMonths(st, t);
             if(reqMonths.length > 0) { await descargarDatosMensualesNube(reqMonths); } else { setCloudStatus("☁️ SINC NUBE"); }
-        } catch(e) { console.error(e); setCloudStatus("🗄️ MODO LOCAL", true); }
+        } catch(e) { 
+            console.error(e); 
+            setCloudStatus("🗄️ MODO LOCAL", true); 
+        }
     };
 
     function getRequiredMonths(startStr, endStr) {
@@ -510,21 +524,61 @@
         } catch(e) { console.error(e); setCloudStatus("⚠️ ERROR RED", true); }
     }
 
+    // 🔥 FIX V51: DRAG & DROP PURO, SIN CLONAR 🔥
     function setupDropZones() {
         let zones = ['modalTotes', 'modalPuntos', 'modalEwm', 'modalEmpeno'];
         zones.forEach(id => {
-            let el = document.getElementById(id); let dz = document.getElementById('dz-' + id); if(!el || !dz) return;
-            let newEl = el.cloneNode(true); el.parentNode.replaceChild(newEl, el); el = newEl;
-            let newDz = dz.cloneNode(true); dz.parentNode.replaceChild(newDz, dz); dz = newDz;
-            el.addEventListener('change', e => { if(e.target.files && e.target.files.length > 0) { dz.classList.add('loaded'); setTxt('fn-'+id.replace('modal','').toLowerCase(), `📦 ${e.target.files.length} archivo(s)`); } });
+            let el = document.getElementById(id); 
+            let dz = document.getElementById('dz-' + id); 
+            if(!el || !dz) return;
+            
+            el.addEventListener('change', e => { 
+                if(e.target.files && e.target.files.length > 0) { 
+                    dz.classList.add('loaded'); 
+                    setTxt('fn-'+id.replace('modal','').toLowerCase(), `📦 ${e.target.files.length} archivo(s)`); 
+                } 
+            });
+            
             dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--primary)'; dz.style.background = 'rgba(56, 189, 248, 0.05)';});
             dz.addEventListener('dragleave', e => { e.preventDefault(); dz.style.borderColor = ''; dz.style.background = 'var(--bg-subtle)';});
-            dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor = ''; dz.style.background = 'var(--bg-subtle)'; if(e.dataTransfer.files && e.dataTransfer.files.length > 0) { el.files = e.dataTransfer.files; dz.classList.add('loaded'); setTxt('fn-'+id.replace('modal','').toLowerCase(), `📦 ${el.files.length} archivo(s)`); } });
+            dz.addEventListener('drop', e => { 
+                e.preventDefault(); 
+                dz.style.borderColor = ''; 
+                dz.style.background = 'var(--bg-subtle)'; 
+                if(e.dataTransfer.files && e.dataTransfer.files.length > 0) { 
+                    el.files = e.dataTransfer.files; 
+                    let event = new Event('change'); // Forza la animación manual
+                    el.dispatchEvent(event);
+                } 
+            });
             dz.onclick = (e) => { if(e.target !== el) el.click(); };
         });
+
+        // Lo mismo para Majestic
+        let majEl = document.getElementById('modalMajestic');
+        let dzMaj = document.getElementById('dz-majestic');
+        if(majEl && dzMaj) {
+            majEl.addEventListener('change', function(e) {
+                if(this.files && this.files.length > 0) {
+                    dzMaj.classList.add('loaded');
+                    setTxt('fn-majestic', `📦 PROCESANDO...`);
+                    handleMajesticUpload(this);
+                }
+            });
+            dzMaj.addEventListener('dragover', e => { e.preventDefault(); dzMaj.style.borderColor = 'var(--primary)'; dzMaj.style.background = 'rgba(56, 189, 248, 0.05)';});
+            dzMaj.addEventListener('dragleave', e => { e.preventDefault(); dzMaj.style.borderColor = 'var(--accent)'; dzMaj.style.background = '';});
+            dzMaj.addEventListener('drop', e => {
+                e.preventDefault(); dzMaj.style.borderColor = 'var(--accent)'; dzMaj.style.background = '';
+                if(e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    majEl.files = e.dataTransfer.files;
+                    let event = new Event('change');
+                    majEl.dispatchEvent(event);
+                }
+            });
+            dzMaj.onclick = (e) => { if(e.target !== majEl) majEl.click(); };
+        }
     }
 
-    // --- MAGIA V50: ACTUALIZACIÓN INCREMENTAL (No Destructiva) ---
     async function updateMasterForDay(d) {
         let mk = d.substring(0,7);
         let dicc_global = await buildGlobalMajesticDict(); 
@@ -548,24 +602,15 @@
         let masterMes = await getStore('detalle_mes', mk) || [];
         if (masterMes.length === 0) return;
 
-        let dicc_global = await buildGlobalMajesticDict();
-        let dicc_manuales = await buildManualesDict();
-        let dicc_fraudes = await buildFraudesDict();
-
-        let todayStr = getToday();
-        let filteredMes = [];
+        let dicc_global = await buildGlobalMajesticDict(); let dicc_manuales = await buildManualesDict(); let dicc_fraudes = await buildFraudesDict();
+        let todayStr = getToday(); let filteredMes = [];
 
         for (let r of masterMes) {
             let ped = r["Pedido"]; let d = r["Día Carga EWM"]; let isPastUpload = (d < todayStr); let isRetail = (r["Línea"] === 'Retail');
-            if (dicc_fraudes && dicc_fraudes[ped]) continue; // Elimina fraudes del Master
+            if (dicc_fraudes && dicc_fraudes[ped]) continue; 
 
-            let meta_cajas = r["Cajas Meta"] || 1; 
-            let c_maj = 0; let f_maj = "Sin registro";
-            
-            if (!isRetail && dicc_global[ped]) {
-                meta_cajas = dicc_global[ped].total_lineas > 0 ? dicc_global[ped].total_lineas : 1;
-                c_maj = dicc_global[ped].lineas_pallet; f_maj = (dicc_global[ped].fecha !== "0000-00-00") ? dicc_global[ped].fecha : "Sin registro";
-            }
+            let meta_cajas = r["Cajas Meta"] || 1; let c_maj = 0; let f_maj = "Sin registro";
+            if (!isRetail && dicc_global[ped]) { meta_cajas = dicc_global[ped].total_lineas > 0 ? dicc_global[ped].total_lineas : 1; c_maj = dicc_global[ped].lineas_pallet; f_maj = (dicc_global[ped].fecha !== "0000-00-00") ? dicc_global[ped].fecha : "Sin registro"; }
             r["Cajas Meta"] = meta_cajas; r["Cajas Majestic"] = c_maj; r["F. Cierre Majestic"] = f_maj;
 
             let c_pto = r["Cajas Puntos"]; let c_tot = r["Cajas Totes"]; let f_pto = r["F. Cierre Escáner"]; let f_tot = r["F. Cierre Totes"];
@@ -574,10 +619,7 @@
             if (isRetail) {
                 if (c_pto >= meta_cajas && c_pto > 0) { isClosed = true; fecha_final = f_pto !== "Sin registro" ? f_pto : d; estatus_str = "FINALIZADO"; } 
                 else if (dicc_manuales[ped]) { isClosed = true; fecha_final = dicc_manuales[ped].fecha; estatus_str = "CIERRE MANUAL"; }
-                else if (c_tot >= meta_cajas && c_tot > 0) { 
-                    if (isPastUpload) { isClosed = true; fecha_final = f_tot !== "Sin registro" ? f_tot : "Fecha Desconocida"; estatus_str = "FINALIZADO"; } 
-                    else { isClosed = false; fecha_final = "Pendiente (Requiere Manual)"; estatus_str = "PENDIENTE (Knapp Ok - Cierre Pendiente)"; }
-                }
+                else if (c_tot >= meta_cajas && c_tot > 0) { if (isPastUpload) { isClosed = true; fecha_final = f_tot !== "Sin registro" ? f_tot : "Fecha Desconocida"; estatus_str = "FINALIZADO"; } else { isClosed = false; fecha_final = "Pendiente (Requiere Manual)"; estatus_str = "PENDIENTE (Knapp Ok - Cierre Pendiente)"; } }
             } else {
                 if (c_maj >= meta_cajas && c_maj > 0) { isClosed = true; fecha_final = f_maj !== "Sin registro" ? f_maj : d; estatus_str = "FINALIZADO"; } 
                 else if (c_pto >= meta_cajas && c_pto > 0) { isClosed = true; fecha_final = f_pto !== "Sin registro" ? f_pto : d; estatus_str = "FINALIZADO"; } 
@@ -695,7 +737,6 @@
             await saveStore('fechas', d, log); DIAS_DISPONIBLES.add(d);
             
             toast("Crudos listos. Agregando al Master..."); 
-            // 🔥 V50 LÓGICA INCREMENTAL: NO RECONSTRUYE DE CERO, SOLO AGREGA AL MASTER EXISTENTE
             await updateMasterForDay(d);
             await refreshGlobalMemory();
             await renderHistoricalDashboards();
@@ -716,8 +757,6 @@
                 if (ped !== "") magesticData.push({ Pedido: ped, Pallet: pal, Embalaje: emb, FechaCierre: fCierre });
             }
             await saveStore('magestic', monthKey, magesticData); await syncCloudData("Magestic_" + monthKey + ".json", magesticData); 
-            
-            // 🔥 V50 LÓGICA INCREMENTAL: SOLO ACTUALIZA EL MASTER EXISTENTE
             await updateMasterExistingRows(monthKey);
             await refreshGlobalMemory();
             await renderHistoricalDashboards();
@@ -840,16 +879,13 @@
                     let obj = await getStore('manuales', k); let m = obj.mes || obj.fecha.substring(0,7);
                     if(affectedMonths.has(m)) { if(!manualesByMonth[m]) manualesByMonth[m] = {}; manualesByMonth[m][k] = obj; }
                 }
-                for(let m of affectedMonths) { 
-                    await syncCloudData(`Cierres_Manuales_${m}.json`, manualesByMonth[m] || {}); 
-                    await updateMasterExistingRows(m); 
-                }
+                for(let m of affectedMonths) { await syncCloudData(`Cierres_Manuales_${m}.json`, manualesByMonth[m] || {}); await updateMasterExistingRows(m); }
                 await refreshGlobalMemory(); await renderHistoricalDashboards();
                 toast(`✅ ${guardados} pedidos cerrados manualmente.`); abrirGestorAtrasados(); 
             } else { toast("⚠️ No seleccionaste ninguna fecha."); } 
         } catch(e) { console.error(e); toast("Error guardando masivo."); } loader(false);
     }
-    function descargarAtrasados() { let pends = TABLA_DETALLE_GLOBAL.filter(x => x.Estatus.includes('PENDIENTE') && daysBetween(x["Día Carga EWM"]) >= 2); if(pends.length === 0) { toast("No hay atrasados."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Atrasados Masivo"); XLSX.writeFile(wb, "Reporte_Atrasados_V50.xlsx"); }
+    function descargarAtrasados() { let pends = TABLA_DETALLE_GLOBAL.filter(x => x.Estatus.includes('PENDIENTE') && daysBetween(x["Día Carga EWM"]) >= 2); if(pends.length === 0) { toast("No hay atrasados."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Atrasados Masivo"); XLSX.writeFile(wb, "Reporte_Atrasados_V51.xlsx"); }
 
     function updateChart(labels, captadas, finalizadas) {
         const ctx = document.getElementById('prodChart').getContext('2d');
@@ -933,7 +969,7 @@
     }
 
     function descargarTablaDetalle() { if(TABLA_DETALLE_MES.length === 0) { toast("No hay datos preparados."); return; } const ws = XLSX.utils.json_to_sheet(TABLA_DETALLE_MES); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Auditoria"); XLSX.writeFile(wb, `Auditoria_Mensual_${document.getElementById('detalle-month-picker').value}.xlsx`); }
-    function descargarPendientes() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let pends = TABLA_DETALLE_GLOBAL.filter(x => x["Estatus"].includes("PENDIENTE") && x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed); if(pends.length === 0) { toast("No hay pendientes."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pendientes"); XLSX.writeFile(wb, "Reporte_Pendientes_V50.xlsx"); }
+    function descargarPendientes() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let pends = TABLA_DETALLE_GLOBAL.filter(x => x["Estatus"].includes("PENDIENTE") && x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed); if(pends.length === 0) { toast("No hay pendientes."); return; } const ws = XLSX.utils.json_to_sheet(pends); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pendientes"); XLSX.writeFile(wb, "Reporte_Pendientes_V51.xlsx"); }
     function descargarIngresos() { let st = document.getElementById('hist-date-start').value; let ed = document.getElementById('hist-date-end').value; let ingresosRango = TABLA_DETALLE_GLOBAL.filter(x => x["Día Carga EWM"] >= st && x["Día Carga EWM"] <= ed).map(x => ({ "Fecha Carga EWM": x["Día Carga EWM"], "Pedido": x["Pedido"], "Línea": x["Línea"], "Unidades": x["Unidades Pedido"] })); if(ingresosRango.length === 0) { toast("No hay cargas EWM."); return; } const ws = XLSX.utils.json_to_sheet(ingresosRango); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Cargas EWM"); XLSX.writeFile(wb, "Reporte_Ingresos_EWM.xlsx"); }
 
     async function renderCalendar() {
@@ -975,7 +1011,7 @@
     }
 
     async function generarMastersEnNube() {
-        if(!confirm("⚠️ ADVERTENCIA: Esta función destruirá el Master de la nube y lo reconstruirá SOLAMENTE con los días que tengas en el crudo local. Úsalo SOLO después de importar un Respaldo JSON completo. ¿Deseas continuar?")) return;
+        if(!confirm("⚠️ ADVERTENCIA: Esta función reconstruirá el Master de la nube SOLAMENTE con los días que tengas en tu memoria local. Úsalo SOLO después de importar un Respaldo JSON completo. ¿Deseas continuar?")) return;
         loader(true, "CREANDO MASTERS DESDE CERO... (NO CIERRES)");
         try {
             let dicc_global = await buildGlobalMajesticDict(); let dicc_manuales = await buildManualesDict();
